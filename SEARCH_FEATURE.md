@@ -24,6 +24,7 @@ There are three ways to open the search panel:
 ### Search Results
 
 Each search result shows:
+
 - **File Name**: The name of the markdown file
 - **File Path**: The relative path from the root folder
 - **Match Count**: Total number of matches found in that file
@@ -40,21 +41,25 @@ Each search result shows:
 ## Features
 
 ### Real-time Search
+
 - Search results update as you type
 - No need to press Enter or click a search button
 - Smart debouncing prevents excessive searches while typing
 
 ### Context-Aware Preview
+
 - See the matching text with surrounding context
 - Up to 40 characters before and after each match
 - Ellipsis (...) indicates truncated content
 
 ### Highlighting
+
 - Search terms are visually highlighted in the preview
 - Makes it easy to spot why a file matched your query
 - Works with case-insensitive matching
 
 ### Performance Optimized
+
 - Only shows top 5 matches per file to keep the UI responsive
 - Total match count displayed for each file
 - Efficient file scanning algorithm
@@ -62,16 +67,19 @@ Each search result shows:
 ## Search Behavior
 
 ### What Gets Searched
+
 - **File Names**: Matches against the markdown file name
 - **File Contents**: Searches through the entire content of each `.md` file
 - **Case Insensitive**: Searches are not case-sensitive
 
 ### What Doesn't Get Searched
+
 - Non-markdown files (e.g., images, PDFs, etc.)
 - Hidden files and folders
 - Files outside the selected root folder
 
 ### Search Limitations
+
 - Maximum 5 preview lines shown per file (total matches still counted)
 - Context preview limited to 80 characters per match
 - Real-time search has 300ms delay to avoid excessive processing
@@ -126,26 +134,29 @@ function searchFiles(folderPath, query):
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+F` / `Cmd+F` | Open search panel |
-| `Escape` | Close search panel |
-| `Enter` | (In input) Keep searching |
+| Shortcut           | Action                    |
+| ------------------ | ------------------------- |
+| `Ctrl+F` / `Cmd+F` | Open search panel         |
+| `Escape`           | Close search panel        |
+| `Enter`            | (In input) Keep searching |
 
 ## Use Cases
 
 ### Finding a Specific Topic
+
 1. Open search with `Ctrl+F`
 2. Type the topic name (e.g., "React Hooks")
 3. Browse results to find relevant files
 4. Click to open the most relevant document
 
 ### Locating a Code Example
+
 1. Search for a specific function or code pattern
 2. Review the context previews to find the right example
 3. Open the file to see the complete code
 
 ### Cross-referencing Information
+
 1. Search for a concept mentioned across multiple files
 2. Use the match count to identify primary sources
 3. Open multiple files to gather comprehensive information
@@ -153,17 +164,20 @@ function searchFiles(folderPath, query):
 ## Tips and Best Practices
 
 ### Effective Searching
+
 - **Be Specific**: Use unique terms to narrow results
 - **Use Keywords**: Technical terms work better than common words
 - **Check Previews**: Review context before opening files
 - **Use Counts**: Files with more matches might be more relevant
 
 ### Working with Results
+
 - Results are sorted by relevance (files found first)
 - File paths help identify the location in your knowledge base
 - Line numbers make it easy to locate content in large files
 
 ### Combining with Other Features
+
 - Use search to find files, then use Outline for navigation
 - Search works with all folders in your history
 - Combine with folder selection for scoped searches
@@ -171,16 +185,19 @@ function searchFiles(folderPath, query):
 ## Troubleshooting
 
 ### No Results Found
+
 - **Check folder selection**: Ensure you have a folder open
 - **Verify file types**: Only `.md` files are searched
 - **Try different terms**: Use synonyms or related keywords
 
 ### Search is Slow
+
 - **Large repositories**: Searching many files takes time
 - **Wait for completion**: Spinner indicates search in progress
 - **Use specific terms**: Reduces the number of results to process
 
 ### Results Don't Update
+
 - **Wait for debounce**: 300ms delay after typing
 - **Check connection**: Ensure main process is responsive
 - **Restart app**: If issues persist, restart the application
@@ -211,31 +228,26 @@ ipcMain.handle('search-files', async (event, { folderPath, query }) => {
 
 ```javascript
 // Renderer Process
-window.api.searchFiles({ folderPath, query })
-  .then(result => {
-    if (result.success) {
-      console.log(`Found ${result.total} results`)
-      result.results.forEach(file => {
-        console.log(file.name, file.matches)
-      })
-    }
-  })
+window.api.searchFiles({ folderPath, query }).then((result) => {
+  if (result.success) {
+    console.log(`Found ${result.total} results`)
+    result.results.forEach((file) => {
+      console.log(file.name, file.matches)
+    })
+  }
+})
 ```
 
 ### Component Props
 
 ```vue
-<SearchPanel
-  :is-open="boolean"
-  :current-folder="string"
-  @close="handler"
-  @select-file="handler"
-/>
+<SearchPanel :is-open="boolean" :current-folder="string" @close="handler" @select-file="handler" />
 ```
 
 ## Credits
 
 Built with:
+
 - Electron IPC for process communication
 - Vue 3 Composition API for reactive UI
 - Native Node.js `fs` module for file operations

@@ -11,14 +11,29 @@ const api = {
   // 文件夹历史 API
   getFolderHistory: () => ipcRenderer.invoke('get-folder-history'),
   addFolderToHistory: (folderPath) => ipcRenderer.invoke('add-folder-to-history', folderPath),
-  removeFolderFromHistory: (folderPath) => ipcRenderer.invoke('remove-folder-from-history', folderPath),
+  removeFolderFromHistory: (folderPath) =>
+    ipcRenderer.invoke('remove-folder-from-history', folderPath),
   getLastFolder: () => ipcRenderer.invoke('get-last-folder'),
   saveLastFolder: (folderPath) => ipcRenderer.invoke('save-last-folder', folderPath),
   // 分享功能 API
-  createShareLink: ({ htmlContent, title }) => ipcRenderer.invoke('create-share-link', { htmlContent, title }),
+  createShareLink: ({ htmlContent, title }) =>
+    ipcRenderer.invoke('create-share-link', { htmlContent, title }),
   stopShareServer: () => ipcRenderer.invoke('stop-share-server'),
   // 搜索功能 API
-  searchFiles: ({ folderPath, query }) => ipcRenderer.invoke('search-files', { folderPath, query }),
+  searchFiles: ({ folderPath, query, autoUpdate, forceRefresh }) =>
+    ipcRenderer.invoke('search-files', {
+      folderPath,
+      query,
+      autoUpdate,
+      forceRefresh
+    }),
+  buildSearchIndex: ({ folderPath }) => ipcRenderer.invoke('build-search-index', { folderPath }),
+  refreshSearchIndex: ({ folderPath }) =>
+    ipcRenderer.invoke('refresh-search-index', { folderPath }),
+  getIndexStats: () => ipcRenderer.invoke('get-index-stats'),
+  clearIndexCache: ({ folderPath }) => ipcRenderer.invoke('clear-index-cache', { folderPath }),
+  checkIndexNeedsUpdate: ({ folderPath }) =>
+    ipcRenderer.invoke('check-index-needs-update', { folderPath }),
   // 文件监视 API
   watchFile: (filePath) => ipcRenderer.invoke('watch-file', filePath),
   unwatchFile: (filePath) => ipcRenderer.invoke('unwatch-file', filePath),

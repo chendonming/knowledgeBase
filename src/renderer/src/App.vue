@@ -17,6 +17,7 @@ const showSearch = ref(false)
 const markdownHtmlContent = ref('')
 const outlineCollapsed = getOutlineCollapsed()
 const themeMode = getThemeMode()
+const searchPanelRef = ref(null)
 
 // 提供全局状态
 provide('outlineCollapsed', outlineCollapsed)
@@ -136,6 +137,13 @@ const handleMenuStopShare = () => {
   window.dispatchEvent(new CustomEvent('menu-stop-share'))
 }
 
+// 刷新搜索索引
+const handleRefreshIndex = () => {
+  if (searchPanelRef.value && searchPanelRef.value.refreshIndex) {
+    searchPanelRef.value.refreshIndex()
+  }
+}
+
 // 处理文件变更并刷新文件树
 const handleFolderFileChanged = async () => {
   // 重新加载当前文件夹的文件树
@@ -198,6 +206,7 @@ onBeforeUnmount(() => {
       @open-folder="handleSelectFolder"
       @open-history="openHistory"
       @open-search="showSearch = true"
+      @refresh-index="handleRefreshIndex"
       @create-share="handleMenuCreateShare"
       @stop-share="handleMenuStopShare"
     />
@@ -210,7 +219,10 @@ onBeforeUnmount(() => {
         />
       </div>
       <div class="main-content">
-        <MarkdownViewer :file-path="selectedFilePath" @html-updated="markdownHtmlContent = $event" />
+        <MarkdownViewer
+          :file-path="selectedFilePath"
+          @html-updated="markdownHtmlContent = $event"
+        />
       </div>
       <div class="outline-panel" :class="{ collapsed: outlineCollapsed }">
         <Outline :html-content="markdownHtmlContent" />
@@ -228,6 +240,7 @@ onBeforeUnmount(() => {
 
     <!-- Search Panel -->
     <SearchPanel
+      ref="searchPanelRef"
       :is-open="showSearch"
       :current-folder="currentFolder"
       @close="showSearch = false"

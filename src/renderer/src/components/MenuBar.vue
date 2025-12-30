@@ -2,7 +2,14 @@
 import { ref, onMounted, onBeforeUnmount, inject } from 'vue'
 import { setThemeMode } from '../stores/uiState'
 
-const emit = defineEmits(['open-folder', 'open-history', 'create-share', 'stop-share', 'open-search'])
+const emit = defineEmits([
+  'open-folder',
+  'open-history',
+  'create-share',
+  'stop-share',
+  'open-search',
+  'refresh-index'
+])
 const themeMode = inject('themeMode', ref('dark'))
 
 const activeMenu = ref(null)
@@ -17,6 +24,7 @@ const menus = ref([
       { id: 'open-folder', label: '打开文件夹', accelerator: 'Ctrl+O', action: 'open-folder' },
       { id: 'open-history', label: '打开历史记录', accelerator: 'Ctrl+H', action: 'open-history' },
       { id: 'open-search', label: '搜索文件', accelerator: 'Ctrl+F', action: 'open-search' },
+      { id: 'refresh-index', label: '刷新索引', accelerator: 'Ctrl+Shift+I', action: 'refresh-index' },
       { type: 'separator' },
       { id: 'quit', label: '退出', accelerator: 'Alt+F4', action: 'quit' }
     ]
@@ -130,6 +138,9 @@ const handleMenuItemClick = async (action) => {
       break
     case 'open-search':
       emit('open-search')
+      break
+    case 'refresh-index':
+      emit('refresh-index')
       break
     case 'create-share':
       emit('create-share')
@@ -288,8 +299,10 @@ onBeforeUnmount(() => {
           top: menuPosition.y + 'px'
         }"
       >
-        <template v-for="(item, index) in menus.find((m) => m.id === activeMenu)?.items || []"
-          :key="index">
+        <template
+          v-for="(item, index) in menus.find((m) => m.id === activeMenu)?.items || []"
+          :key="index"
+        >
           <div
             v-if="!item.submenu"
             class="dropdown-item"
@@ -333,7 +346,9 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 1000;
   -webkit-app-region: drag;
-  transition: background 0.3s ease, border-color 0.3s ease;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .menu-bar-content {
@@ -421,7 +436,9 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   padding: 4px 0;
   z-index: 10000;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .dropdown-item {
@@ -481,7 +498,9 @@ onBeforeUnmount(() => {
   opacity: 0;
   pointer-events: none;
   transform: translateX(-4px);
-  transition: opacity 0.15s, transform 0.15s;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
   z-index: 10001;
 }
 

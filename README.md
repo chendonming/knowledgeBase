@@ -19,12 +19,14 @@ A personal knowledge base tool built with Electron and Vue that renders Markdown
 Easily manage your recently used folders with the new folder history feature!
 
 ### Quick Start
+
 1. Select a folder using "Select Folder" button
 2. Press `Ctrl+H` (Windows/Linux) or `Cmd+H` (macOS) to open history
 3. Click any folder in the history list to quickly load it
 4. Your last opened folder is automatically restored on app restart
 
 ### Key Features
+
 - **Auto-Save**: Last opened folder is automatically remembered
 - **History List**: View your 20 most recent folders
 - **Quick Access**: Use Ctrl+H keyboard shortcut
@@ -38,12 +40,14 @@ For detailed instructions, see [FOLDER_HISTORY_FEATURE.md](./FOLDER_HISTORY_FEAT
 Search through all markdown files in your knowledge base instantly!
 
 ### Quick Start
+
 1. Open a folder with markdown files
 2. Press `Ctrl+F` (Windows/Linux) or `Cmd+F` (macOS) to open search
 3. Type your search query
 4. Click on any result to open that file
 
 ### Key Features
+
 - **Real-time Search**: Results update as you type
 - **Content Preview**: See matching lines with context
 - **Highlighting**: Search terms are highlighted in results
@@ -113,7 +117,5 @@ The markdown parser is built on the Unified ecosystem, allowing for deep customi
 
 ```javascript
 // Add custom plugins to the markdown processor
-processor
-  .use(customPlugin)
-  .use(anotherPlugin, options)
+processor.use(customPlugin).use(anotherPlugin, options)
 ```

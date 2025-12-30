@@ -7,6 +7,7 @@ import path from 'path'
 import { existsSync, mkdirSync, watch } from 'fs'
 import http from 'http'
 import { networkInterfaces } from 'os'
+import { searchManager } from './searchManager.js'
 
 // 获取应用数据目录
 const getUserDataPath = () => {
@@ -175,179 +176,6 @@ const stopShareServer = () => {
     return true
   }
   return false
-}
-
-// 创建应用菜单
-function createAppMenu(mainWindow) {
-  const isMac = process.platform === 'darwin'
-
-  const template = [
-    // macOS 应用菜单
-    ...(isMac
-      ? [
-          {
-            label: app.name,
-            submenu: [
-              { role: 'about', label: '关于 ' + app.name },
-              { type: 'separator' },
-              { role: 'services', label: '服务' },
-              { type: 'separator' },
-              { role: 'hide', label: '隐藏 ' + app.name },
-              { role: 'hideOthers', label: '隐藏其他' },
-              { role: 'unhide', label: '显示全部' },
-              { type: 'separator' },
-              { role: 'quit', label: '退出 ' + app.name }
-            ]
-          }
-        ]
-      : []),
-    // 文件菜单
-    {
-      label: '文件',
-      submenu: [
-        {
-          label: '打开文件夹',
-          accelerator: 'CmdOrCtrl+O',
-          click: async () => {
-            const result = await dialog.showOpenDialog(mainWindow, {
-              properties: ['openDirectory'],
-              title: '选择Markdown文件夹'
-            })
-            if (!result.canceled && result.filePaths.length > 0) {
-              mainWindow.webContents.send('menu-open-folder', result.filePaths[0])
-            }
-          }
-        },
-        {
-          label: '打开历史记录',
-          accelerator: 'CmdOrCtrl+H',
-          click: () => {
-            mainWindow.webContents.send('menu-open-history')
-          }
-        },
-        { type: 'separator' },
-        ...(!isMac
-          ? [
-              {
-                label: '退出',
-                accelerator: 'Alt+F4',
-                role: 'quit'
-              }
-            ]
-          : [])
-      ]
-    },
-    // 分享菜单
-    {
-      label: '分享',
-      submenu: [
-        {
-          label: '生成分享链接',
-          accelerator: 'CmdOrCtrl+Shift+S',
-          click: () => {
-            mainWindow.webContents.send('menu-create-share')
-          }
-        },
-        {
-          label: '停止分享',
-          accelerator: 'CmdOrCtrl+Shift+X',
-          click: () => {
-            mainWindow.webContents.send('menu-stop-share')
-          }
-        }
-      ]
-    },
-    // 编辑菜单
-    {
-      label: '编辑',
-      submenu: [
-        { role: 'undo', label: '撤销' },
-        { role: 'redo', label: '重做' },
-        { type: 'separator' },
-        { role: 'cut', label: '剪切' },
-        { role: 'copy', label: '复制' },
-        { role: 'paste', label: '粘贴' },
-        ...(isMac
-          ? [
-              { role: 'pasteAndMatchStyle', label: '粘贴并匹配样式' },
-              { role: 'delete', label: '删除' },
-              { role: 'selectAll', label: '全选' },
-              { type: 'separator' },
-              {
-                label: '语音',
-                submenu: [
-                  { role: 'startSpeaking', label: '开始朗读' },
-                  { role: 'stopSpeaking', label: '停止朗读' }
-                ]
-              }
-            ]
-          : [
-              { role: 'delete', label: '删除' },
-              { type: 'separator' },
-              { role: 'selectAll', label: '全选' }
-            ])
-      ]
-    },
-    // 查看菜单
-    {
-      label: '查看',
-      submenu: [
-        { role: 'reload', label: '重新加载' },
-        { role: 'forceReload', label: '强制重新加载' },
-        { role: 'toggleDevTools', label: '切换开发者工具' },
-        { type: 'separator' },
-        { role: 'resetZoom', label: '实际大小' },
-        { role: 'zoomIn', label: '放大' },
-        { role: 'zoomOut', label: '缩小' },
-        { type: 'separator' },
-        { role: 'togglefullscreen', label: '切换全屏' }
-      ]
-    },
-    // 窗口菜单 (macOS)
-    ...(isMac
-      ? [
-          {
-            label: '窗口',
-            submenu: [
-              { role: 'minimize', label: '最小化' },
-              { role: 'zoom', label: '缩放' },
-              { type: 'separator' },
-              { role: 'front', label: '全部置于顶层' },
-              { type: 'separator' },
-              { role: 'window', label: '窗口' }
-            ]
-          }
-        ]
-      : []),
-    // 帮助菜单
-    {
-      label: '帮助',
-      submenu: [
-        {
-          label: '学习更多',
-          click: async () => {
-            await shell.openExternal('https://github.com/electron/electron')
-          }
-        },
-        { type: 'separator' },
-        {
-          label: '关于 Knowledge Base',
-          click: () => {
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: '关于',
-              message: 'Knowledge Base',
-              detail: '一个基于 Electron 和 Vue 的 Markdown 知识库应用\n\n版本: 1.0.0',
-              buttons: ['确定']
-            })
-          }
-        }
-      ]
-    }
-  ]
-
-  const menu = Menu.buildFromTemplate(template)
-  Menu.setApplicationMenu(menu)
 }
 
 function createWindow() {
@@ -599,7 +427,7 @@ app.whenReady().then(() => {
       }
 
       // 移除重复项
-      history = history.filter(item => item !== folderPath)
+      history = history.filter((item) => item !== folderPath)
       // 添加到开头
       history.unshift(folderPath)
       // 只保留最近的 20 个
@@ -627,7 +455,7 @@ app.whenReady().then(() => {
         history = JSON.parse(data)
       }
 
-      history = history.filter(item => item !== folderPath)
+      history = history.filter((item) => item !== folderPath)
 
       const dir = path.dirname(historyFile)
       if (!existsSync(dir)) {
@@ -731,84 +559,75 @@ app.whenReady().then(() => {
     }
   })
 
-  // 搜索功能 IPC 处理器
-  ipcMain.handle('search-files', async (event, { folderPath, query }) => {
+  // 搜索功能 IPC 处理器 - 使用 FileSearchManager
+  ipcMain.handle(
+    'search-files',
+    async (event, { folderPath, query, autoUpdate = true, forceRefresh = false }) => {
+      return await searchManager.search(folderPath, query, {
+        autoUpdate,
+        forceRefresh
+      })
+    }
+  )
+
+  // 预建索引 IPC 处理器 - 在后台提前构建索引以加快搜索速度
+  ipcMain.handle('build-search-index', async (event, { folderPath }) => {
     try {
-      if (!folderPath || !query) {
-        return { success: false, results: [] }
+      await searchManager.buildIndexForFolder(folderPath)
+      return {
+        success: true,
+        message: 'Index built successfully'
       }
-
-      const results = []
-      const searchQuery = query.toLowerCase()
-
-      async function searchInDirectory(currentPath) {
-        const entries = await fs.readdir(currentPath, { withFileTypes: true })
-
-        for (const entry of entries) {
-          const fullPath = path.join(currentPath, entry.name)
-
-          if (entry.isDirectory()) {
-            await searchInDirectory(fullPath)
-          } else if (path.extname(entry.name) === '.md') {
-            try {
-              const content = await fs.readFile(fullPath, 'utf-8')
-              const contentLower = content.toLowerCase()
-              const nameLower = entry.name.toLowerCase()
-
-              // 检查文件名或内容是否包含搜索词
-              if (nameLower.includes(searchQuery) || contentLower.includes(searchQuery)) {
-                const lines = content.split('\n')
-                const matches = []
-
-                // 查找匹配的行
-                lines.forEach((line, index) => {
-                  if (line.toLowerCase().includes(searchQuery)) {
-                    matches.push({
-                      lineNumber: index + 1,
-                      content: line.trim(),
-                      preview: getContextPreview(line, searchQuery)
-                    })
-                  }
-                })
-
-                // 只保留前5个匹配
-                const limitedMatches = matches.slice(0, 5)
-
-                results.push({
-                  path: fullPath,
-                  name: entry.name,
-                  relativePath: path.relative(folderPath, fullPath),
-                  matches: limitedMatches,
-                  matchCount: matches.length
-                })
-              }
-            } catch (error) {
-              console.error(`Error reading file ${fullPath}:`, error)
-            }
-          }
-        }
-      }
-
-      // 获取上下文预览
-      function getContextPreview(line, query) {
-        const index = line.toLowerCase().indexOf(query.toLowerCase())
-        if (index === -1) return line.trim()
-
-        const start = Math.max(0, index - 40)
-        const end = Math.min(line.length, index + query.length + 40)
-        let preview = line.substring(start, end).trim()
-
-        if (start > 0) preview = '...' + preview
-        if (end < line.length) preview = preview + '...'
-
-        return preview
-      }
-
-      await searchInDirectory(folderPath)
-
-      return { success: true, results, total: results.length }
     } catch (error) {
-      return { success: false, error: error.message, results: [] }
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  })
+
+  // 刷新索引 IPC 处理器 - 强制重建索引
+  ipcMain.handle('refresh-search-index', async (event, { folderPath }) => {
+    try {
+      await searchManager.refreshIndex(folderPath)
+      return {
+        success: true,
+        message: 'Index refreshed successfully'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  })
+
+  // 获取索引缓存状态
+  ipcMain.handle('get-index-stats', async (event) => {
+    return searchManager.getCacheStats()
+  })
+
+  // 清空索引缓存
+  ipcMain.handle('clear-index-cache', async (event, { folderPath }) => {
+    try {
+      if (folderPath) {
+        searchManager.clearIndexCache(folderPath)
+      } else {
+        searchManager.clearAllCache()
+      }
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 检查索引是否需要更新
+  ipcMain.handle('check-index-needs-update', async (event, { folderPath }) => {
+    try {
+      const needsUpdate = await searchManager.needsIndexUpdate(folderPath)
+      return { success: true, needsUpdate }
+    } catch (error) {
+      return { success: false, error: error.message }
     }
   })
 
