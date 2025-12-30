@@ -1,15 +1,16 @@
 <template>
   <div class="outline-container" :class="{ collapsed: isCollapsed }">
-    <div class="outline-header">
+    <div v-if="!isCollapsed" class="outline-header">
       <h3>📑 大纲</h3>
-      <button v-if="headings.length" class="toggle-btn" @click="toggleCollapse">
-        {{ isCollapsed ? '▶' : '◀' }}
-      </button>
     </div>
 
-    <div v-if="!headings.length" class="outline-empty">暂无标题</div>
+    <button v-if="headings.length" class="toggle-btn-side" @click="toggleCollapse">
+      {{ isCollapsed ? '▶' : '◀' }}
+    </button>
 
-    <ul v-else class="outline-list">
+    <div v-if="!headings.length && !isCollapsed" class="outline-empty">暂无标题</div>
+
+    <ul v-else-if="!isCollapsed" class="outline-list">
       <li
         v-for="heading in headings"
         :key="`${heading.id}-${heading.level}`"
@@ -110,74 +111,88 @@ watch(
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--bg-secondary, #2a2a2a);
-  border-right: 1px solid var(--border-color, #404040);
+  background: #1b1b1f;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  width: 250px;
+  width: 260px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 /* 折叠状态：向右收起隐藏 */
 .outline-container.collapsed {
-  width: 40px;
-  border-right: 1px solid var(--border-color, #404040);
+  width: 45px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.outline-container.collapsed .outline-header {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  padding: 8px 6px;
-}
-
-.outline-container.collapsed .outline-header h3 {
-  writing-mode: horizontal-tb;
-  transform: rotate(180deg);
-  white-space: nowrap;
+.toggle-btn-side {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 8px 10px;
   font-size: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
 }
 
-.outline-container.collapsed .outline-empty,
-.outline-container.collapsed .outline-list {
-  display: none;
+.toggle-btn-side:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.86);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .outline-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 12px;
-  border-bottom: 1px solid var(--border-color, #404040);
-  background: var(--bg-tertiary, #1f1f1f);
-  min-height: 50px;
+  padding: 16px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+  min-height: 56px;
   flex-shrink: 0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .outline-header h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, #e8e8e8);
+  color: rgba(255, 255, 255, 0.86);
+  letter-spacing: 0.3px;
 }
 
 .toggle-btn {
-  padding: 4px 8px;
-  font-size: 12px;
-  background: var(--bg-primary, #1a1a1a);
-  border: 1px solid var(--border-color, #404040);
-  color: var(--text-secondary, #a8a8a8);
+  padding: 4px 6px;
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
-  min-width: 24px;
+  min-width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .toggle-btn:hover {
-  background: var(--border-color, #404040);
-  color: var(--text-primary, #e8e8e8);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.86);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .outline-empty {
@@ -185,17 +200,17 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary, #a8a8a8);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 12px;
   text-align: center;
-  padding: 16px;
+  padding: 24px 16px;
 }
 
 .outline-list {
   flex: 1;
   overflow-y: auto;
   list-style: none;
-  padding: 8px 0;
+  padding: 12px 0;
   margin: 0;
   transition: all 0.3s ease;
 }
@@ -207,77 +222,96 @@ watch(
 
 .outline-item a {
   display: block;
-  padding: 6px 12px;
+  padding: 8px 16px;
   font-size: 13px;
-  color: var(--text-secondary, #a8a8a8);
+  color: rgba(255, 255, 255, 0.6);
   text-decoration: none;
-  border-left: 2px solid transparent;
-  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+  line-height: 1.5;
 }
 
 .outline-item a:hover {
-  color: var(--text-primary, #e8e8e8);
-  background: var(--bg-tertiary, #1f1f1f);
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.05);
+  border-left-color: rgba(74, 158, 255, 0.5);
 }
 
-/* 层级缩进 */
+/* 层级缩进和样式 */
 .outline-item.level-1 a {
-  padding-left: 12px;
+  padding-left: 16px;
   font-weight: 600;
-  color: var(--text-primary, #e8e8e8);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.76);
+  margin-top: 4px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.outline-item.level-1 a:hover {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .outline-item.level-2 a {
-  padding-left: 24px;
+  padding-left: 28px;
   font-weight: 500;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.65);
 }
 
 .outline-item.level-3 a {
-  padding-left: 36px;
+  padding-left: 40px;
   font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .outline-item.level-4 a {
-  padding-left: 48px;
-  font-size: 12px;
+  padding-left: 52px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .outline-item.level-5 a {
-  padding-left: 60px;
+  padding-left: 64px;
   font-size: 11px;
-  color: var(--text-secondary, #a8a8a8);
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .outline-item.level-6 a {
-  padding-left: 72px;
-  font-size: 11px;
-  color: var(--text-secondary, #a8a8a8);
+  padding-left: 76px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
 }
 
-.outline-item a:hover {
-  border-left-color: var(--accent-color, #4a9eff);
+.outline-item a:active {
+  background: rgba(74, 158, 255, 0.15);
+  border-left-color: rgba(74, 158, 255, 0.8);
 }
 
 /* 滚动条样式 */
 .outline-list::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .outline-list::-webkit-scrollbar-track {
   background: transparent;
+  margin: 4px 0;
 }
 
 .outline-list::-webkit-scrollbar-thumb {
-  background: var(--border-color, #404040);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .outline-list::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary, #a8a8a8);
+  background: rgba(255, 255, 255, 0.2);
+  background-clip: padding-box;
 }
 
 /* 高亮效果 */
@@ -287,10 +321,15 @@ watch(
 
 @keyframes highlight-pulse {
   0% {
-    background-color: rgba(74, 158, 255, 0.2);
+    background-color: rgba(74, 158, 255, 0.3);
+    box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+  }
+  50% {
+    background-color: rgba(74, 158, 255, 0.15);
   }
   100% {
     background-color: transparent;
+    box-shadow: none;
   }
 }
 </style>
