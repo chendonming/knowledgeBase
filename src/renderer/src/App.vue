@@ -1,9 +1,10 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, provide, watch } from 'vue'
 import FileTree from './components/FileTree.vue'
 import MarkdownViewer from './components/MarkdownViewer.vue'
 import FolderHistory from './components/FolderHistory.vue'
 import Outline from './components/Outline.vue'
+import { initializeUIState, getOutlineCollapsed } from './stores/uiState'
 
 const fileTree = ref(null)
 const selectedFilePath = ref(null)
@@ -11,6 +12,10 @@ const currentFolder = ref(null)
 const folderHistory = ref([])
 const showHistory = ref(false)
 const markdownHtmlContent = ref('')
+const outlineCollapsed = getOutlineCollapsed()
+
+// 提供全局状态
+provide('outlineCollapsed', outlineCollapsed)
 
 // 加载文件夹
 const loadFolder = async (folderPath) => {
@@ -91,6 +96,9 @@ const handleKeyDown = (event) => {
 
 // 初始化
 onMounted(async () => {
+  // 初始化UI状态
+  initializeUIState()
+
   // 加载历史记录
   await loadFolderHistory()
 
@@ -123,6 +131,7 @@ onBeforeUnmount(() => {
     <div class="sidebar">
       <FileTree
         :tree="fileTree"
+        :selected-path="selectedFilePath"
         @select-folder="handleSelectFolder"
         @select-file="handleSelectFile"
         @show-history="openHistory"
@@ -131,7 +140,7 @@ onBeforeUnmount(() => {
     <div class="main-content">
       <MarkdownViewer :file-path="selectedFilePath" @html-updated="markdownHtmlContent = $event" />
     </div>
-    <div class="outline-panel">
+    <div class="outline-panel" :class="{ collapsed: outlineCollapsed }">
       <Outline :html-content="markdownHtmlContent" />
     </div>
 
@@ -174,6 +183,11 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.outline-panel.collapsed {
+  width: 40px;
 }
 
 .header {

@@ -3,14 +3,20 @@
     <div class="file-tree-header">
       <h3>Files</h3>
       <div class="header-actions">
-        <button class="btn-history" @click="$emit('show-history')" title="Folder History (Ctrl+H)">
+        <button class="btn-history" title="Folder History (Ctrl+H)" @click="$emit('show-history')">
           📋
         </button>
         <button class="btn-select" @click="$emit('select-folder')">Select Folder</button>
       </div>
     </div>
     <div class="tree-content">
-      <TreeNode v-if="tree" :node="tree" :level="0" @select="handleSelect" />
+      <TreeNode
+        v-if="tree"
+        :node="tree"
+        :level="0"
+        :selected-path="selectedPath"
+        @select="handleSelect"
+      />
       <div v-else class="empty-state">No folder selected</div>
     </div>
   </div>
@@ -22,6 +28,10 @@ import TreeNode from './TreeNode.vue'
 defineProps({
   tree: {
     type: Object,
+    default: null
+  },
+  selectedPath: {
+    type: String,
     default: null
   }
 })

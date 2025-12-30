@@ -1,19 +1,20 @@
 <template>
-  <div class="outline-container">
+  <div class="outline-container" :class="{ collapsed: isCollapsed }">
     <div class="outline-header">
       <h3>📑 大纲</h3>
-      <button v-if="headings.length" @click="toggleCollapse" class="toggle-btn">
-        {{ isCollapsed ? '展开' : '收起' }}
+      <button v-if="headings.length" class="toggle-btn" @click="toggleCollapse">
+        {{ isCollapsed ? '▶' : '◀' }}
       </button>
     </div>
 
-    <div v-if="!headings.length" class="outline-empty">
-      暂无标题
-    </div>
+    <div v-if="!headings.length" class="outline-empty">暂无标题</div>
 
-    <ul v-else class="outline-list" :class="{ collapsed: isCollapsed }">
-      <li v-for="heading in headings" :key="`${heading.id}-${heading.level}`"
-          :class="`outline-item level-${heading.level}`">
+    <ul v-else class="outline-list">
+      <li
+        v-for="heading in headings"
+        :key="`${heading.id}-${heading.level}`"
+        :class="`outline-item level-${heading.level}`"
+      >
         <a :href="`#${heading.id}`" @click.prevent="scrollToHeading(heading.id)">
           {{ heading.text }}
         </a>
@@ -24,6 +25,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { getOutlineCollapsed, toggleOutlineCollapsed } from '../stores/uiState'
 
 const props = defineProps({
   htmlContent: {
@@ -33,7 +35,7 @@ const props = defineProps({
 })
 
 const headings = ref([])
-const isCollapsed = ref(false)
+const isCollapsed = getOutlineCollapsed()
 
 // 从HTML内容中提取标题
 const extractHeadings = (htmlContent) => {
@@ -87,16 +89,20 @@ const scrollToHeading = (headingId) => {
 
 // 切换大纲展开/收起
 const toggleCollapse = () => {
-  isCollapsed.value = !isCollapsed.value
+  toggleOutlineCollapsed()
 }
 
 // 监听htmlContent变化
-watch(() => props.htmlContent, (newContent) => {
-  // 延迟提取，确保DOM已更新
-  setTimeout(() => {
-    extractHeadings(newContent)
-  }, 100)
-}, { immediate: true })
+watch(
+  () => props.htmlContent,
+  (newContent) => {
+    // 延迟提取，确保DOM已更新
+    setTimeout(() => {
+      extractHeadings(newContent)
+    }, 100)
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -107,6 +113,32 @@ watch(() => props.htmlContent, (newContent) => {
   background: var(--bg-secondary, #2a2a2a);
   border-right: 1px solid var(--border-color, #404040);
   overflow: hidden;
+  width: 250px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 折叠状态：向右收起隐藏 */
+.outline-container.collapsed {
+  width: 40px;
+  border-right: 1px solid var(--border-color, #404040);
+}
+
+.outline-container.collapsed .outline-header {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding: 8px 6px;
+}
+
+.outline-container.collapsed .outline-header h3 {
+  writing-mode: horizontal-tb;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.outline-container.collapsed .outline-empty,
+.outline-container.collapsed .outline-list {
+  display: none;
 }
 
 .outline-header {
@@ -116,6 +148,9 @@ watch(() => props.htmlContent, (newContent) => {
   padding: 16px 12px;
   border-bottom: 1px solid var(--border-color, #404040);
   background: var(--bg-tertiary, #1f1f1f);
+  min-height: 50px;
+  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .outline-header h3 {
@@ -134,6 +169,10 @@ watch(() => props.htmlContent, (newContent) => {
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .toggle-btn:hover {
@@ -158,12 +197,7 @@ watch(() => props.htmlContent, (newContent) => {
   list-style: none;
   padding: 8px 0;
   margin: 0;
-  transition: opacity 0.3s ease;
-}
-
-.outline-list.collapsed {
-  opacity: 0.5;
-  pointer-events: none;
+  transition: all 0.3s ease;
 }
 
 .outline-item {

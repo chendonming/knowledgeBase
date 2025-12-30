@@ -13,7 +13,10 @@ const api = {
   addFolderToHistory: (folderPath) => ipcRenderer.invoke('add-folder-to-history', folderPath),
   removeFolderFromHistory: (folderPath) => ipcRenderer.invoke('remove-folder-from-history', folderPath),
   getLastFolder: () => ipcRenderer.invoke('get-last-folder'),
-  saveLastFolder: (folderPath) => ipcRenderer.invoke('save-last-folder', folderPath)
+  saveLastFolder: (folderPath) => ipcRenderer.invoke('save-last-folder', folderPath),
+  // 分享功能 API
+  createShareLink: ({ htmlContent, title }) => ipcRenderer.invoke('create-share-link', { htmlContent, title }),
+  stopShareServer: () => ipcRenderer.invoke('stop-share-server')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -18,6 +18,7 @@
         :key="index"
         :node="child"
         :level="level + 1"
+        :selected-path="selectedPath"
         @select="$emit('select', $event)"
       />
     </div>
@@ -25,7 +26,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   node: {
@@ -35,20 +36,27 @@ const props = defineProps({
   level: {
     type: Number,
     default: 0
+  },
+  selectedPath: {
+    type: String,
+    default: null
   }
 })
 
 const emit = defineEmits(['select'])
 
 const isExpanded = ref(props.level === 0)
-const isSelected = ref(false)
+
+// 根据 selectedPath 计算是否选中
+const isSelected = computed(() => {
+  return props.node.type === 'file' && props.node.path === props.selectedPath
+})
 
 const handleClick = () => {
   if (props.node.type === 'directory') {
     isExpanded.value = !isExpanded.value
   } else {
     emit('select', props.node)
-    isSelected.value = true
   }
 }
 </script>
