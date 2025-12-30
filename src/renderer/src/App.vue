@@ -87,11 +87,32 @@ const removeFromHistory = async (folderPath) => {
 
 // 监听全局快捷键
 const handleKeyDown = (event) => {
-  // Ctrl+H 打开文件夹历史
+  // Ctrl+H 打开文件夹历史 (现在由菜单处理，保留以防万一)
   if ((event.ctrlKey || event.metaKey) && event.key === 'h') {
     event.preventDefault()
     showHistory.value = !showHistory.value
   }
+}
+
+// 处理菜单命令
+const handleMenuOpenFolder = async (event, folderPath) => {
+  if (folderPath) {
+    await loadFolder(folderPath)
+  }
+}
+
+const handleMenuOpenHistory = () => {
+  showHistory.value = true
+}
+
+const handleMenuCreateShare = () => {
+  // 触发分享链接创建事件，由 MarkdownViewer 处理
+  window.dispatchEvent(new CustomEvent('menu-create-share'))
+}
+
+const handleMenuStopShare = () => {
+  // 触发停止分享事件，由 MarkdownViewer 处理
+  window.dispatchEvent(new CustomEvent('menu-stop-share'))
 }
 
 // 初始化
@@ -118,6 +139,12 @@ onMounted(async () => {
 
   // 添加快捷键监听
   window.addEventListener('keydown', handleKeyDown)
+
+  // 监听菜单事件
+  window.api.onMenuOpenFolder(handleMenuOpenFolder)
+  window.api.onMenuOpenHistory(handleMenuOpenHistory)
+  window.api.onMenuCreateShare(handleMenuCreateShare)
+  window.api.onMenuStopShare(handleMenuStopShare)
 })
 
 // 清理事件监听
@@ -132,9 +159,7 @@ onBeforeUnmount(() => {
       <FileTree
         :tree="fileTree"
         :selected-path="selectedFilePath"
-        @select-folder="handleSelectFolder"
         @select-file="handleSelectFile"
-        @show-history="openHistory"
       />
     </div>
     <div class="main-content">

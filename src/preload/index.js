@@ -16,7 +16,12 @@ const api = {
   saveLastFolder: (folderPath) => ipcRenderer.invoke('save-last-folder', folderPath),
   // 分享功能 API
   createShareLink: ({ htmlContent, title }) => ipcRenderer.invoke('create-share-link', { htmlContent, title }),
-  stopShareServer: () => ipcRenderer.invoke('stop-share-server')
+  stopShareServer: () => ipcRenderer.invoke('stop-share-server'),
+  // 菜单事件监听器
+  onMenuOpenFolder: (callback) => ipcRenderer.on('menu-open-folder', callback),
+  onMenuOpenHistory: (callback) => ipcRenderer.on('menu-open-history', callback),
+  onMenuCreateShare: (callback) => ipcRenderer.on('menu-create-share', callback),
+  onMenuStopShare: (callback) => ipcRenderer.on('menu-stop-share', callback)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

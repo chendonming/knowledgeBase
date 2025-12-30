@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -161,19 +161,105 @@ const stopShareServer = () => {
   return false
 }
 
+// 创建应用菜单
+function createAppMenu(mainWindow) {
+  const template = [
+    {
+      label: '文件',
+      submenu: [
+        {
+          label: '打开文件夹',
+          accelerator: 'CmdOrCtrl+O',
+          click: async () => {
+            const result = await dialog.showOpenDialog({
+              properties: ['openDirectory']
+            })
+            if (!result.canceled && result.filePaths.length > 0) {
+              mainWindow.webContents.send('menu-open-folder', result.filePaths[0])
+            }
+          }
+        },
+        {
+          label: '打开历史记录',
+          accelerator: 'CmdOrCtrl+H',
+          click: () => {
+            mainWindow.webContents.send('menu-open-history')
+          }
+        },
+        { type: 'separator' },
+        {
+          label: '退出',
+          accelerator: 'CmdOrCtrl+Q',
+          role: 'quit'
+        }
+      ]
+    },
+    {
+      label: '分享',
+      submenu: [
+        {
+          label: '生成分享链接',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            mainWindow.webContents.send('menu-create-share')
+          }
+        },
+        {
+          label: '停止分享',
+          click: () => {
+            mainWindow.webContents.send('menu-stop-share')
+          }
+        }
+      ]
+    },
+    {
+      label: '编辑',
+      submenu: [
+        { role: 'undo', label: '撤销' },
+        { role: 'redo', label: '重做' },
+        { type: 'separator' },
+        { role: 'cut', label: '剪切' },
+        { role: 'copy', label: '复制' },
+        { role: 'paste', label: '粘贴' },
+        { role: 'selectAll', label: '全选' }
+      ]
+    },
+    {
+      label: '查看',
+      submenu: [
+        { role: 'reload', label: '重新加载' },
+        { role: 'forceReload', label: '强制重新加载' },
+        { role: 'toggleDevTools', label: '切换开发者工具' },
+        { type: 'separator' },
+        { role: 'resetZoom', label: '重置缩放' },
+        { role: 'zoomIn', label: '放大' },
+        { role: 'zoomOut', label: '缩小' },
+        { type: 'separator' },
+        { role: 'togglefullscreen', label: '切换全屏' }
+      ]
+    }
+  ]
+
+  const menu = Menu.buildFromTemplate(template)
+  Menu.setApplicationMenu(menu)
+}
+
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     show: false,
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     }
   })
+
+  // 创建应用菜单
+  createAppMenu(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()

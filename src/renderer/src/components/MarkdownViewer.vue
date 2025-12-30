@@ -3,36 +3,6 @@
     <div v-if="loading" class="loading">Loading...</div>
     <div v-else-if="error" class="error">Error: {{ error }}</div>
     <div v-else>
-      <!-- 分享按钮 -->
-      <div v-if="htmlContent" class="share-toolbar">
-        <button
-          v-if="!shareUrl"
-          class="share-btn"
-          :disabled="isCreatingShare"
-          @click="createShareLink"
-        >
-          {{ isCreatingShare ? '生成中...' : '🔗 生成分享链接' }}
-        </button>
-        <div v-else class="share-link-container">
-          <div class="share-link-info">
-            <span class="share-label">分享链接:</span>
-            <input
-              ref="shareLinkInput"
-              type="text"
-              :value="shareUrl"
-              readonly
-              class="share-link-input"
-              @click="selectShareLink"
-            />
-            <button class="copy-btn" :class="{ copied: copied }" @click="copyShareLink">
-              {{ copied ? '✓ 已复制' : '📋 复制' }}
-            </button>
-            <button class="stop-btn" @click="stopSharing">✕ 停止分享</button>
-          </div>
-          <div class="share-hint">💡 局域网内的用户可以通过此链接查看此文档</div>
-        </div>
-      </div>
-
       <!-- Frontmatter metadata display -->
       <div v-if="frontmatter" class="frontmatter-card">
         <h1 v-if="frontmatter.title" class="fm-title">{{ frontmatter.title }}</h1>
@@ -53,7 +23,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
@@ -147,6 +117,41 @@ const copyShareLink = async () => {
     }, 2000)
   }
 }
+
+// 处理菜单创建分享事件
+const handleMenuCreateShare = async () => {
+  if (!htmlContent.value) {
+    alert('请先选择一个 Markdown 文件')
+    return
+  }
+  await createShareLink()
+  if (shareUrl.value) {
+    // 复制到剪贴板并提示
+    await copyShareLink()
+    alert(`分享链接已生成并复制到剪贴板:\n${shareUrl.value}`)
+  }
+}
+
+// 处理菜单停止分享事件
+const handleMenuStopShare = async () => {
+  if (shareUrl.value) {
+    await stopSharing()
+    alert('分享已停止')
+  } else {
+    alert('当前没有正在分享的文档')
+  }
+}
+
+// 监听菜单事件
+onMounted(() => {
+  window.addEventListener('menu-create-share', handleMenuCreateShare)
+  window.addEventListener('menu-stop-share', handleMenuStopShare)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('menu-create-share', handleMenuCreateShare)
+  window.removeEventListener('menu-stop-share', handleMenuStopShare)
+})
 
 const formatDate = (dateStr) => {
   try {
@@ -400,127 +405,6 @@ watch(
 
 .error {
   color: #f56c6c;
-}
-
-/* 分享工具栏样式 */
-.share-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.share-btn {
-  background: var(--accent-color);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.3s;
-}
-
-.share-btn:hover:not(:disabled) {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-}
-
-.share-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.share-link-container {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.share-link-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.share-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  white-space: nowrap;
-}
-
-.share-link-input {
-  flex: 1;
-  min-width: 300px;
-  padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 13px;
-  font-family: 'Courier New', monospace;
-  outline: none;
-  transition: all 0.2s;
-}
-
-.share-link-input:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
-}
-
-.copy-btn,
-.stop-btn {
-  padding: 8px 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.copy-btn {
-  background: var(--bg-primary);
-  color: var(--text-primary);
-}
-
-.copy-btn:hover {
-  background: var(--accent-color);
-  color: white;
-  border-color: var(--accent-color);
-}
-
-.copy-btn.copied {
-  background: #67c23a;
-  color: white;
-  border-color: #67c23a;
-}
-
-.stop-btn {
-  background: var(--bg-primary);
-  color: #f56c6c;
-  border-color: #f56c6c;
-}
-
-.stop-btn:hover {
-  background: #f56c6c;
-  color: white;
-}
-
-.share-hint {
-  font-size: 12px;
-  color: var(--text-secondary);
-  padding-left: 4px;
 }
 
 /* Frontmatter Card Styles */
