@@ -3,12 +3,14 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import FileTree from './components/FileTree.vue'
 import MarkdownViewer from './components/MarkdownViewer.vue'
 import FolderHistory from './components/FolderHistory.vue'
+import Outline from './components/Outline.vue'
 
 const fileTree = ref(null)
 const selectedFilePath = ref(null)
 const currentFolder = ref(null)
 const folderHistory = ref([])
 const showHistory = ref(false)
+const markdownHtmlContent = ref('')
 
 // 加载文件夹
 const loadFolder = async (folderPath) => {
@@ -127,7 +129,10 @@ onBeforeUnmount(() => {
       />
     </div>
     <div class="main-content">
-      <MarkdownViewer :file-path="selectedFilePath" />
+      <MarkdownViewer :file-path="selectedFilePath" @html-updated="markdownHtmlContent = $event" />
+    </div>
+    <div class="outline-panel">
+      <Outline :html-content="markdownHtmlContent" />
     </div>
 
     <!-- Folder History Modal -->
@@ -161,6 +166,14 @@ onBeforeUnmount(() => {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-primary);
+}
+
+.outline-panel {
+  width: 250px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .header {

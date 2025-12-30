@@ -41,6 +41,8 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['html-updated'])
+
 const htmlContent = ref('')
 const frontmatter = ref(null)
 const loading = ref(false)
@@ -192,6 +194,7 @@ const loadFile = async () => {
   if (!props.filePath) {
     htmlContent.value = '<p>Select a file to view</p>'
     frontmatter.value = null
+    emit('html-updated', '')
     return
   }
 
@@ -203,12 +206,15 @@ const loadFile = async () => {
     const result = await window.api.readFile(props.filePath)
     if (result.success) {
       htmlContent.value = await parseMarkdown(result.content)
-      // 不在这里调用 loadLocalImages，而是通过 watch 监听
+      // 触发事件，通知大纲组件更新
+      emit('html-updated', htmlContent.value)
     } else {
       error.value = result.error
+      emit('html-updated', '')
     }
   } catch (err) {
     error.value = err.message
+    emit('html-updated', '')
   } finally {
     loading.value = false
   }
