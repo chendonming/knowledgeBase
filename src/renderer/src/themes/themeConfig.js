@@ -1,0 +1,191 @@
+/**
+ * 主题配置文件
+ * 支持多套主题，新增主题只需在此文件添加配置即可
+ */
+
+export const themes = {
+  dark: {
+    name: '深色',
+    id: 'dark',
+    colors: {
+      'bg-primary': '#1e1e1e',
+      'bg-secondary': '#252525',
+      'bg-tertiary': '#2d2d2d',
+      'text-primary': '#e8e8e8',
+      'text-secondary': '#a0a0a0',
+      'text-tertiary': '#707070',
+      'border-color': '#3e3e3e',
+      'accent-color': '#4a9eff',
+      'accent-hover': '#66b1ff',
+      'sidebar-bg': '#252525',
+      'header-bg': '#1e1e1e',
+      'code-bg': '#2d2d2d',
+      'hover-bg': '#2d2d2d',
+      'selected-bg': '#264f78',
+      'menubar-bg-start': '#2d2d30',
+      'menubar-bg-end': '#252526',
+      'menubar-border': '#1e1e1e',
+      'menubar-text': '#cccccc',
+      'menubar-hover-bg': 'rgba(255, 255, 255, 0.1)',
+      'dropdown-bg': '#2d2d30',
+      'dropdown-border': '#454545',
+      'dropdown-hover-bg': '#094771'
+    }
+  },
+  light: {
+    name: '浅色',
+    id: 'light',
+    colors: {
+      'bg-primary': '#ffffff',
+      'bg-secondary': '#f3f3f3',
+      'bg-tertiary': '#ececec',
+      'text-primary': '#1e1e1e',
+      'text-secondary': '#5a5a5a',
+      'text-tertiary': '#8f8f8f',
+      'border-color': '#d0d0d0',
+      'accent-color': '#0078d4',
+      'accent-hover': '#1084d7',
+      'sidebar-bg': '#f3f3f3',
+      'header-bg': '#ffffff',
+      'code-bg': '#f0f0f0',
+      'hover-bg': '#e8e8e8',
+      'selected-bg': '#e0e7ff',
+      'menubar-bg-start': '#f3f3f3',
+      'menubar-bg-end': '#ebebeb',
+      'menubar-border': '#d0d0d0',
+      'menubar-text': '#333333',
+      'menubar-hover-bg': 'rgba(0, 0, 0, 0.08)',
+      'dropdown-bg': '#ffffff',
+      'dropdown-border': '#d0d0d0',
+      'dropdown-hover-bg': '#e3f2fd'
+    }
+  },
+  blue: {
+    name: '蓝色',
+    id: 'blue',
+    colors: {
+      'bg-primary': '#0f1621',
+      'bg-secondary': '#1a2332',
+      'bg-tertiary': '#253447',
+      'text-primary': '#e3f2fd',
+      'text-secondary': '#90caf9',
+      'text-tertiary': '#64b5f6',
+      'border-color': '#42a5f5',
+      'accent-color': '#42a5f5',
+      'accent-hover': '#64b5f6',
+      'sidebar-bg': '#1a2332',
+      'header-bg': '#0f1621',
+      'code-bg': '#253447',
+      'hover-bg': '#1e2d42',
+      'selected-bg': '#1e3a5f',
+      'menubar-bg-start': '#1a2332',
+      'menubar-bg-end': '#0f1621',
+      'menubar-border': '#0f1621',
+      'menubar-text': '#90caf9',
+      'menubar-hover-bg': 'rgba(66, 165, 245, 0.15)',
+      'dropdown-bg': '#1a2332',
+      'dropdown-border': '#42a5f5',
+      'dropdown-hover-bg': '#1e3a5f'
+    }
+  },
+  green: {
+    name: '绿色',
+    id: 'green',
+    colors: {
+      'bg-primary': '#0d1b0f',
+      'bg-secondary': '#1a2d1f',
+      'bg-tertiary': '#284033',
+      'text-primary': '#e0f7e0',
+      'text-secondary': '#81c784',
+      'text-tertiary': '#66bb6a',
+      'border-color': '#4caf50',
+      'accent-color': '#4caf50',
+      'accent-hover': '#66bb6a',
+      'sidebar-bg': '#1a2d1f',
+      'header-bg': '#0d1b0f',
+      'code-bg': '#284033',
+      'hover-bg': '#1f3424',
+      'selected-bg': '#1f4526',
+      'menubar-bg-start': '#1a2d1f',
+      'menubar-bg-end': '#0d1b0f',
+      'menubar-border': '#0d1b0f',
+      'menubar-text': '#81c784',
+      'menubar-hover-bg': 'rgba(76, 175, 80, 0.15)',
+      'dropdown-bg': '#1a2d1f',
+      'dropdown-border': '#4caf50',
+      'dropdown-hover-bg': '#1f4526'
+    }
+  },
+  purple: {
+    name: '紫色',
+    id: 'purple',
+    colors: {
+      'bg-primary': '#1a0f2e',
+      'bg-secondary': '#2d1b45',
+      'bg-tertiary': '#402860',
+      'text-primary': '#f3e5f5',
+      'text-secondary': '#ce93d8',
+      'text-tertiary': '#ba68c8',
+      'border-color': '#ab47bc',
+      'accent-color': '#ab47bc',
+      'accent-hover': '#ba68c8',
+      'sidebar-bg': '#2d1b45',
+      'header-bg': '#1a0f2e',
+      'code-bg': '#402860',
+      'hover-bg': '#3a2455',
+      'selected-bg': '#45315a',
+      'menubar-bg-start': '#2d1b45',
+      'menubar-bg-end': '#1a0f2e',
+      'menubar-border': '#1a0f2e',
+      'menubar-text': '#ce93d8',
+      'menubar-hover-bg': 'rgba(171, 71, 188, 0.15)',
+      'dropdown-bg': '#2d1b45',
+      'dropdown-border': '#ab47bc',
+      'dropdown-hover-bg': '#45315a'
+    }
+  }
+}
+
+/**
+ * 获取主题配置
+ * @param {string} themeId - 主题ID
+ * @returns {Object} 主题配置对象
+ */
+export const getThemeConfig = (themeId) => {
+  return themes[themeId] || themes.dark
+}
+
+/**
+ * 获取所有主题列表
+ * @returns {Array} 主题列表
+ */
+export const getThemeList = () => {
+  return Object.values(themes).map((theme) => ({
+    id: theme.id,
+    name: theme.name
+  }))
+}
+
+/**
+ * 应用主题到DOM
+ * @param {string} themeId - 主题ID
+ */
+export const applyTheme = (themeId) => {
+  const theme = getThemeConfig(themeId)
+  const root = document.documentElement
+
+  // 移除所有主题类
+  Object.keys(themes).forEach((id) => {
+    root.classList.remove(`${id}-theme`)
+  })
+
+  // 添加新主题类
+  if (themeId !== 'dark') {
+    root.classList.add(`${themeId}-theme`)
+  }
+
+  // 应用 CSS 变量
+  Object.entries(theme.colors).forEach(([key, value]) => {
+    root.style.setProperty(`--${key}`, value)
+  })
+}

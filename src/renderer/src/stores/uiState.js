@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { applyTheme, getThemeConfig } from '../themes/themeConfig'
 
 // 全局UI状态
 const outlineCollapsed = ref(false)
@@ -21,17 +22,28 @@ export const initTheme = () => {
     themeMode.value = getSystemTheme()
     localStorage.setItem('theme-mode', themeMode.value)
   }
+
+  // 应用主题到DOM
+  applyTheme(themeMode.value)
 }
 
 // 设置主题
 export const setThemeMode = (mode) => {
   themeMode.value = mode
   localStorage.setItem('theme-mode', mode)
+
+  // 应用主题到DOM
+  applyTheme(mode)
 }
 
 // 获取当前主题
 export const getThemeMode = () => {
   return themeMode
+}
+
+// 获取当前主题配置
+export const getCurrentThemeConfig = () => {
+  return getThemeConfig(themeMode.value)
 }
 
 // 从localStorage恢复状态

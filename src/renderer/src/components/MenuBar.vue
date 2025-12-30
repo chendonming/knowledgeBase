@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, inject } from 'vue'
 import { setThemeMode } from '../stores/uiState'
+import { getThemeList } from '../themes/themeConfig'
 
 const emit = defineEmits([
   'open-folder',
@@ -14,6 +15,15 @@ const themeMode = inject('themeMode', ref('dark'))
 
 const activeMenu = ref(null)
 const menuPosition = ref({ x: 0, y: 0 })
+
+// 动态生成主题菜单
+const getThemeSubmenu = () => {
+  return getThemeList().map((theme) => ({
+    id: `theme-${theme.id}`,
+    label: theme.name,
+    action: `theme-${theme.id}`
+  }))
+}
 
 // 菜单项定义
 const menus = ref([
@@ -88,10 +98,7 @@ const menus = ref([
       {
         id: 'theme',
         label: '主题',
-        submenu: [
-          { id: 'theme-dark', label: '深色', action: 'theme-dark' },
-          { id: 'theme-light', label: '浅色', action: 'theme-light' }
-        ]
+        submenu: getThemeSubmenu()
       }
     ]
   },
@@ -202,6 +209,15 @@ const handleMenuItemClick = async (action) => {
       break
     case 'theme-light':
       setThemeMode('light')
+      break
+    case 'theme-blue':
+      setThemeMode('blue')
+      break
+    case 'theme-green':
+      setThemeMode('green')
+      break
+    case 'theme-purple':
+      setThemeMode('purple')
       break
     case 'learn-more':
       window.open('https://github.com/electron/electron', '_blank')
