@@ -17,6 +17,8 @@ const api = {
   // 分享功能 API
   createShareLink: ({ htmlContent, title }) => ipcRenderer.invoke('create-share-link', { htmlContent, title }),
   stopShareServer: () => ipcRenderer.invoke('stop-share-server'),
+  // 搜索功能 API
+  searchFiles: ({ folderPath, query }) => ipcRenderer.invoke('search-files', { folderPath, query }),
   // 窗口控制 API（用于自定义菜单栏）
   toggleDevTools: () => ipcRenderer.invoke('toggle-devtools'),
   toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),

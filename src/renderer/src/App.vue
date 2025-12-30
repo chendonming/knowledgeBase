@@ -4,6 +4,7 @@ import MenuBar from './components/MenuBar.vue'
 import FileTree from './components/FileTree.vue'
 import MarkdownViewer from './components/MarkdownViewer.vue'
 import FolderHistory from './components/FolderHistory.vue'
+import SearchPanel from './components/SearchPanel.vue'
 import Outline from './components/Outline.vue'
 import { initializeUIState, getOutlineCollapsed } from './stores/uiState'
 
@@ -12,6 +13,7 @@ const selectedFilePath = ref(null)
 const currentFolder = ref(null)
 const folderHistory = ref([])
 const showHistory = ref(false)
+const showSearch = ref(false)
 const markdownHtmlContent = ref('')
 const outlineCollapsed = getOutlineCollapsed()
 
@@ -93,6 +95,11 @@ const handleKeyDown = (event) => {
     event.preventDefault()
     showHistory.value = !showHistory.value
   }
+  // Ctrl+F 打开搜索面板
+  if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+    event.preventDefault()
+    showSearch.value = !showSearch.value
+  }
 }
 
 // 处理菜单命令
@@ -159,6 +166,7 @@ onBeforeUnmount(() => {
     <MenuBar
       @open-folder="handleSelectFolder"
       @open-history="openHistory"
+      @open-search="showSearch = true"
       @create-share="handleMenuCreateShare"
       @stop-share="handleMenuStopShare"
     />
@@ -185,6 +193,14 @@ onBeforeUnmount(() => {
       @close="closeHistory"
       @select="selectHistoryFolder"
       @remove="removeFromHistory"
+    />
+
+    <!-- Search Panel -->
+    <SearchPanel
+      :is-open="showSearch"
+      :current-folder="currentFolder"
+      @close="showSearch = false"
+      @select-file="handleSelectFile"
     />
   </div>
 </template>

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 
-const emit = defineEmits(['open-folder', 'open-history', 'create-share', 'stop-share'])
+const emit = defineEmits(['open-folder', 'open-history', 'create-share', 'stop-share', 'open-search'])
 
 const activeMenu = ref(null)
 const menuPosition = ref({ x: 0, y: 0 })
@@ -14,6 +14,7 @@ const menus = ref([
     items: [
       { id: 'open-folder', label: '打开文件夹', accelerator: 'Ctrl+O', action: 'open-folder' },
       { id: 'open-history', label: '打开历史记录', accelerator: 'Ctrl+H', action: 'open-history' },
+      { id: 'open-search', label: '搜索文件', accelerator: 'Ctrl+F', action: 'open-search' },
       { type: 'separator' },
       { id: 'quit', label: '退出', accelerator: 'Alt+F4', action: 'quit' }
     ]
@@ -115,6 +116,9 @@ const handleMenuItemClick = async (action) => {
       break
     case 'open-history':
       emit('open-history')
+      break
+    case 'open-search':
+      emit('open-search')
       break
     case 'create-share':
       emit('create-share')

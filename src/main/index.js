@@ -673,6 +673,87 @@ app.whenReady().then(() => {
     }
   })
 
+  // 搜索功能 IPC 处理器
+  ipcMain.handle('search-files', async (event, { folderPath, query }) => {
+    try {
+      if (!folderPath || !query) {
+        return { success: false, results: [] }
+      }
+
+      const results = []
+      const searchQuery = query.toLowerCase()
+
+      async function searchInDirectory(currentPath) {
+        const entries = await fs.readdir(currentPath, { withFileTypes: true })
+
+        for (const entry of entries) {
+          const fullPath = path.join(currentPath, entry.name)
+
+          if (entry.isDirectory()) {
+            await searchInDirectory(fullPath)
+          } else if (path.extname(entry.name) === '.md') {
+            try {
+              const content = await fs.readFile(fullPath, 'utf-8')
+              const contentLower = content.toLowerCase()
+              const nameLower = entry.name.toLowerCase()
+
+              // 检查文件名或内容是否包含搜索词
+              if (nameLower.includes(searchQuery) || contentLower.includes(searchQuery)) {
+                const lines = content.split('\n')
+                const matches = []
+
+                // 查找匹配的行
+                lines.forEach((line, index) => {
+                  if (line.toLowerCase().includes(searchQuery)) {
+                    matches.push({
+                      lineNumber: index + 1,
+                      content: line.trim(),
+                      preview: getContextPreview(line, searchQuery)
+                    })
+                  }
+                })
+
+                // 只保留前5个匹配
+                const limitedMatches = matches.slice(0, 5)
+
+                results.push({
+                  path: fullPath,
+                  name: entry.name,
+                  relativePath: path.relative(folderPath, fullPath),
+                  matches: limitedMatches,
+                  matchCount: matches.length
+                })
+              }
+            } catch (error) {
+              console.error(`Error reading file ${fullPath}:`, error)
+            }
+          }
+        }
+      }
+
+      // 获取上下文预览
+      function getContextPreview(line, query) {
+        const index = line.toLowerCase().indexOf(query.toLowerCase())
+        if (index === -1) return line.trim()
+
+        const start = Math.max(0, index - 40)
+        const end = Math.min(line.length, index + query.length + 40)
+        let preview = line.substring(start, end).trim()
+
+        if (start > 0) preview = '...' + preview
+        if (end < line.length) preview = preview + '...'
+
+        return preview
+      }
+
+      await searchInDirectory(folderPath)
+
+      return { success: true, results, total: results.length }
+    } catch (error) {
+      return { success: false, error: error.message, results: [] }
+    }
+  })
+
   createWindow()
 
   app.on('activate', function () {

@@ -33,6 +33,23 @@ Easily manage your recently used folders with the new folder history feature!
 
 For detailed instructions, see [FOLDER_HISTORY_FEATURE.md](./FOLDER_HISTORY_FEATURE.md)
 
+## New Feature: Full-Text Search
+
+Search through all markdown files in your knowledge base instantly!
+
+### Quick Start
+1. Open a folder with markdown files
+2. Press `Ctrl+F` (Windows/Linux) or `Cmd+F` (macOS) to open search
+3. Type your search query
+4. Click on any result to open that file
+
+### Key Features
+- **Real-time Search**: Results update as you type
+- **Content Preview**: See matching lines with context
+- **Highlighting**: Search terms are highlighted in results
+- **Quick Navigation**: Jump to any file with one click
+- **File Count**: See total number of matches per file
+
 ## Technology Stack
 
 - **Electron**: Cross-platform desktop application framework
@@ -81,6 +98,8 @@ $ pnpm build:linux
 2. Click "Select Folder" to choose a directory containing markdown files
 3. Browse the file tree in the sidebar
 4. Click on any `.md` file to view its rendered content
+5. Press `Ctrl+F` to search through all files
+6. Press `Ctrl+H` to access folder history
 
 ## Architecture
 
