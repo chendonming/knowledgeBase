@@ -6,7 +6,7 @@ import MarkdownViewer from './components/MarkdownViewer.vue'
 import FolderHistory from './components/FolderHistory.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import Outline from './components/Outline.vue'
-import { initializeUIState, getOutlineCollapsed } from './stores/uiState'
+import { initializeUIState, getOutlineCollapsed, initTheme, getThemeMode } from './stores/uiState'
 
 const fileTree = ref(null)
 const selectedFilePath = ref(null)
@@ -16,9 +16,16 @@ const showHistory = ref(false)
 const showSearch = ref(false)
 const markdownHtmlContent = ref('')
 const outlineCollapsed = getOutlineCollapsed()
+const themeMode = getThemeMode()
 
 // 提供全局状态
 provide('outlineCollapsed', outlineCollapsed)
+provide('themeMode', themeMode)
+
+// 初始化主题
+onMounted(() => {
+  initTheme()
+})
 
 // 加载文件夹
 const loadFolder = async (folderPath) => {
@@ -162,7 +169,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-container">
+  <div class="app-container" :class="{ 'light-theme': themeMode === 'light' }">
     <MenuBar
       @open-folder="handleSelectFolder"
       @open-history="openHistory"

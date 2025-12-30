@@ -111,8 +111,8 @@ watch(
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1b1b1f;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-color);
   overflow: hidden;
   width: 260px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -122,7 +122,7 @@ watch(
 /* 折叠状态：向右收起隐藏 */
 .outline-container.collapsed {
   width: 45px;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -135,9 +135,9 @@ watch(
   transform: translateY(-50%);
   padding: 8px 10px;
   font-size: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.6);
+  background: var(--hover-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
@@ -148,9 +148,9 @@ watch(
 }
 
 .toggle-btn-side:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.86);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--hover-bg);
+  color: var(--text-primary);
+  border-color: var(--accent-color);
 }
 
 .outline-header {
@@ -158,8 +158,8 @@ watch(
   justify-content: space-between;
   align-items: center;
   padding: 16px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
   min-height: 56px;
   flex-shrink: 0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -169,16 +169,16 @@ watch(
   margin: 0;
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.86);
+  color: var(--text-primary);
   letter-spacing: 0.3px;
 }
 
 .toggle-btn {
   padding: 4px 6px;
   font-size: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.6);
+  background: var(--hover-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
@@ -190,9 +190,9 @@ watch(
 }
 
 .toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.86);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--hover-bg);
+  color: var(--text-primary);
+  border-color: var(--accent-color);
 }
 
 .outline-empty {
@@ -200,7 +200,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-tertiary);
   font-size: 12px;
   text-align: center;
   padding: 24px 16px;
@@ -224,7 +224,7 @@ watch(
   display: block;
   padding: 8px 16px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
   text-decoration: none;
   border-left: 3px solid transparent;
   transition: all 0.2s ease;
@@ -236,9 +236,9 @@ watch(
 }
 
 .outline-item a:hover {
-  color: rgba(255, 255, 255, 0.86);
-  background: rgba(255, 255, 255, 0.05);
-  border-left-color: rgba(74, 158, 255, 0.5);
+  color: var(--text-primary);
+  background: var(--hover-bg);
+  border-left-color: var(--accent-color);
 }
 
 /* 层级缩进和样式 */
@@ -246,50 +246,50 @@ watch(
   padding-left: 16px;
   font-weight: 600;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.76);
+  color: var(--text-primary);
   margin-top: 4px;
   padding-top: 10px;
   padding-bottom: 10px;
 }
 
 .outline-item.level-1 a:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
 }
 
 .outline-item.level-2 a {
   padding-left: 28px;
   font-weight: 500;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--text-secondary);
 }
 
 .outline-item.level-3 a {
   padding-left: 40px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-secondary);
 }
 
 .outline-item.level-4 a {
   padding-left: 52px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
 }
 
 .outline-item.level-5 a {
   padding-left: 64px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-tertiary);
 }
 
 .outline-item.level-6 a {
   padding-left: 76px;
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-tertiary);
 }
 
 .outline-item a:active {
-  background: rgba(74, 158, 255, 0.15);
-  border-left-color: rgba(74, 158, 255, 0.8);
+  background: var(--selected-bg);
+  border-left-color: var(--accent-color);
 }
 
 /* 滚动条样式 */
@@ -303,14 +303,14 @@ watch(
 }
 
 .outline-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--border-color);
   border-radius: 4px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
 .outline-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--text-tertiary);
   background-clip: padding-box;
 }
 
@@ -321,11 +321,11 @@ watch(
 
 @keyframes highlight-pulse {
   0% {
-    background-color: rgba(74, 158, 255, 0.3);
-    box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+    background-color: var(--selected-bg);
+    box-shadow: 0 0 0 2px var(--accent-color);
   }
   50% {
-    background-color: rgba(74, 158, 255, 0.15);
+    background-color: var(--hover-bg);
   }
   100% {
     background-color: transparent;

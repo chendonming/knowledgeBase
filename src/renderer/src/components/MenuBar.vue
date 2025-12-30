@@ -1,7 +1,9 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, inject } from 'vue'
+import { setThemeMode } from '../stores/uiState'
 
 const emit = defineEmits(['open-folder', 'open-history', 'create-share', 'stop-share', 'open-search'])
+const themeMode = inject('themeMode', ref('dark'))
 
 const activeMenu = ref(null)
 const menuPosition = ref({ x: 0, y: 0 })
@@ -73,6 +75,15 @@ const menus = ref([
         label: '切换全屏',
         accelerator: 'F11',
         action: 'toggle-fullscreen'
+      },
+      { type: 'separator' },
+      {
+        id: 'theme',
+        label: '主题',
+        submenu: [
+          { id: 'theme-dark', label: '深色', action: 'theme-dark' },
+          { id: 'theme-light', label: '浅色', action: 'theme-light' }
+        ]
       }
     ]
   },
@@ -175,6 +186,12 @@ const handleMenuItemClick = async (action) => {
         window.api.toggleFullscreen()
       }
       break
+    case 'theme-dark':
+      setThemeMode('dark')
+      break
+    case 'theme-light':
+      setThemeMode('light')
+      break
     case 'learn-more':
       window.open('https://github.com/electron/electron', '_blank')
       break
@@ -271,18 +288,34 @@ onBeforeUnmount(() => {
           top: menuPosition.y + 'px'
         }"
       >
-        <div
-          v-for="(item, index) in menus.find((m) => m.id === activeMenu)?.items || []"
-          :key="index"
-          class="dropdown-item"
-          :class="{ separator: item.type === 'separator' }"
-          @click="item.action && handleMenuItemClick(item.action)"
-        >
-          <template v-if="item.type !== 'separator'">
+        <template v-for="(item, index) in menus.find((m) => m.id === activeMenu)?.items || []"
+          :key="index">
+          <div
+            v-if="!item.submenu"
+            class="dropdown-item"
+            :class="{ separator: item.type === 'separator' }"
+            @click="item.action && handleMenuItemClick(item.action)"
+          >
+            <template v-if="item.type !== 'separator'">
+              <span class="item-label">{{ item.label }}</span>
+              <span v-if="item.accelerator" class="item-accelerator">{{ item.accelerator }}</span>
+            </template>
+          </div>
+          <div v-else class="dropdown-item submenu-item" @click.stop>
             <span class="item-label">{{ item.label }}</span>
-            <span v-if="item.accelerator" class="item-accelerator">{{ item.accelerator }}</span>
-          </template>
-        </div>
+            <span class="submenu-arrow">▶</span>
+            <div class="submenu">
+              <div
+                v-for="subitem in item.submenu"
+                :key="subitem.id"
+                class="dropdown-item"
+                @click="subitem.action && handleMenuItemClick(subitem.action)"
+              >
+                <span class="item-label">{{ subitem.label }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </Transition>
   </div>
@@ -291,8 +324,8 @@ onBeforeUnmount(() => {
 <style scoped>
 .menu-bar {
   height: 40px;
-  background: linear-gradient(180deg, #2d2d30 0%, #252526 100%);
-  border-bottom: 1px solid #1e1e1e;
+  background: linear-gradient(180deg, var(--menubar-bg-start) 0%, var(--menubar-bg-end) 100%);
+  border-bottom: 1px solid var(--menubar-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -300,6 +333,7 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 1000;
   -webkit-app-region: drag;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .menu-bar-content {
@@ -312,9 +346,10 @@ onBeforeUnmount(() => {
 .app-title {
   font-size: 14px;
   font-weight: 600;
-  color: #cccccc;
+  color: var(--menubar-text);
   margin-right: 24px;
   padding: 0 8px;
+  transition: color 0.3s ease;
 }
 
 .menu-items {
@@ -326,7 +361,7 @@ onBeforeUnmount(() => {
 .menu-item {
   padding: 6px 12px;
   font-size: 13px;
-  color: #cccccc;
+  color: var(--menubar-text);
   cursor: pointer;
   border-radius: 4px;
   transition:
@@ -335,13 +370,13 @@ onBeforeUnmount(() => {
 }
 
 .menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background-color: var(--menubar-hover-bg);
+  color: var(--text-primary);
 }
 
 .menu-item.active {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+  background-color: var(--menubar-hover-bg);
+  color: var(--text-primary);
 }
 
 .window-controls {
@@ -356,7 +391,7 @@ onBeforeUnmount(() => {
   height: 100%;
   border: none;
   background: transparent;
-  color: #cccccc;
+  color: var(--menubar-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -368,8 +403,8 @@ onBeforeUnmount(() => {
 }
 
 .window-control-btn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background-color: var(--menubar-hover-bg);
+  color: var(--text-primary);
 }
 
 .window-control-btn.close:hover {
@@ -380,18 +415,19 @@ onBeforeUnmount(() => {
 .dropdown-menu {
   position: fixed;
   min-width: 220px;
-  background: #2d2d30;
-  border: 1px solid #454545;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   padding: 4px 0;
   z-index: 10000;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .dropdown-item {
   padding: 8px 16px;
   font-size: 13px;
-  color: #cccccc;
+  color: var(--text-primary);
   cursor: pointer;
   display: flex;
   justify-content: space-between;
@@ -399,19 +435,64 @@ onBeforeUnmount(() => {
   transition:
     background-color 0.15s,
     color 0.15s;
+  position: relative;
 }
 
-.dropdown-item:not(.separator):hover {
-  background-color: #094771;
-  color: #ffffff;
+.dropdown-item:not(.separator):not(.submenu-item):hover {
+  background-color: var(--dropdown-hover-bg);
+  color: var(--accent-color);
 }
 
 .dropdown-item.separator {
   height: 1px;
-  background: #454545;
+  background: var(--border-color);
   margin: 4px 8px;
   padding: 0;
   cursor: default;
+  transition: background-color 0.3s ease;
+}
+
+.submenu-item {
+  position: relative;
+}
+
+.submenu-item:hover .submenu {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.submenu-arrow {
+  margin-left: 8px;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.submenu {
+  position: absolute;
+  left: 100%;
+  top: -4px;
+  min-width: 160px;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  padding: 4px 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 10001;
+}
+
+.submenu .dropdown-item {
+  padding: 8px 16px;
+  color: var(--text-primary);
+}
+
+.submenu .dropdown-item:hover {
+  background-color: var(--dropdown-hover-bg);
+  color: var(--accent-color);
 }
 
 .item-label {

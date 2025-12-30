@@ -16,6 +16,40 @@
   --code-bg: #2d2d2d;
   --hover-bg: #2d2d2d;
   --selected-bg: #264f78;
+  --menubar-bg-start: #2d2d30;
+  --menubar-bg-end: #252526;
+  --menubar-border: #1e1e1e;
+  --menubar-text: #cccccc;
+  --menubar-hover-bg: rgba(255, 255, 255, 0.1);
+  --dropdown-bg: #2d2d30;
+  --dropdown-border: #454545;
+  --dropdown-hover-bg: #094771;
+}
+
+/* CSS Variables for Light Theme */
+.light-theme {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --bg-tertiary: #ececec;
+  --text-primary: #1e1e1e;
+  --text-secondary: #5a5a5a;
+  --text-tertiary: #8f8f8f;
+  --border-color: #d0d0d0;
+  --accent-color: #0078d4;
+  --accent-hover: #1084d7;
+  --sidebar-bg: #f3f3f3;
+  --header-bg: #ffffff;
+  --code-bg: #f0f0f0;
+  --hover-bg: #e8e8e8;
+  --selected-bg: #e0e7ff;
+  --menubar-bg-start: #f3f3f3;
+  --menubar-bg-end: #ebebeb;
+  --menubar-border: #d0d0d0;
+  --menubar-text: #333333;
+  --menubar-hover-bg: rgba(0, 0, 0, 0.08);
+  --dropdown-bg: #ffffff;
+  --dropdown-border: #d0d0d0;
+  --dropdown-hover-bg: #e3f2fd;
 }
 
 * {
@@ -31,6 +65,7 @@ body {
     sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #app {
@@ -38,6 +73,7 @@ body {
   height: 100vh;
   overflow: hidden;
   background: var(--bg-primary);
+  transition: background-color 0.3s ease;
 }
 
 code {
@@ -48,6 +84,7 @@ code {
   color: var(--text-primary);
   font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
   font-size: 85%;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Scrollbar styles - Dark theme */
