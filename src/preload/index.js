@@ -17,6 +17,12 @@ const api = {
   // 分享功能 API
   createShareLink: ({ htmlContent, title }) => ipcRenderer.invoke('create-share-link', { htmlContent, title }),
   stopShareServer: () => ipcRenderer.invoke('stop-share-server'),
+  // 窗口控制 API（用于自定义菜单栏）
+  toggleDevTools: () => ipcRenderer.invoke('toggle-devtools'),
+  toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
+  minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
+  maximizeWindow: () => ipcRenderer.invoke('maximize-window'),
+  closeWindow: () => ipcRenderer.invoke('close-window'),
   // 菜单事件监听器
   onMenuOpenFolder: (callback) => ipcRenderer.on('menu-open-folder', callback),
   onMenuOpenHistory: (callback) => ipcRenderer.on('menu-open-history', callback),

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, provide, watch } from 'vue'
+import MenuBar from './components/MenuBar.vue'
 import FileTree from './components/FileTree.vue'
 import MarkdownViewer from './components/MarkdownViewer.vue'
 import FolderHistory from './components/FolderHistory.vue'
@@ -155,18 +156,26 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="app-container">
-    <div class="sidebar">
-      <FileTree
-        :tree="fileTree"
-        :selected-path="selectedFilePath"
-        @select-file="handleSelectFile"
-      />
-    </div>
-    <div class="main-content">
-      <MarkdownViewer :file-path="selectedFilePath" @html-updated="markdownHtmlContent = $event" />
-    </div>
-    <div class="outline-panel" :class="{ collapsed: outlineCollapsed }">
-      <Outline :html-content="markdownHtmlContent" />
+    <MenuBar
+      @open-folder="handleSelectFolder"
+      @open-history="openHistory"
+      @create-share="handleMenuCreateShare"
+      @stop-share="handleMenuStopShare"
+    />
+    <div class="app-main">
+      <div class="sidebar">
+        <FileTree
+          :tree="fileTree"
+          :selected-path="selectedFilePath"
+          @select-file="handleSelectFile"
+        />
+      </div>
+      <div class="main-content">
+        <MarkdownViewer :file-path="selectedFilePath" @html-updated="markdownHtmlContent = $event" />
+      </div>
+      <div class="outline-panel" :class="{ collapsed: outlineCollapsed }">
+        <Outline :html-content="markdownHtmlContent" />
+      </div>
     </div>
 
     <!-- Folder History Modal -->
@@ -183,10 +192,17 @@ onBeforeUnmount(() => {
 <style scoped>
 .app-container {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow: hidden;
   background: var(--bg-primary);
   position: relative;
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 .sidebar {

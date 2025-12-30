@@ -163,7 +163,29 @@ const stopShareServer = () => {
 
 // 创建应用菜单
 function createAppMenu(mainWindow) {
+  const isMac = process.platform === 'darwin'
+
   const template = [
+    // macOS 应用菜单
+    ...(isMac
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { role: 'about', label: '关于 ' + app.name },
+              { type: 'separator' },
+              { role: 'services', label: '服务' },
+              { type: 'separator' },
+              { role: 'hide', label: '隐藏 ' + app.name },
+              { role: 'hideOthers', label: '隐藏其他' },
+              { role: 'unhide', label: '显示全部' },
+              { type: 'separator' },
+              { role: 'quit', label: '退出 ' + app.name }
+            ]
+          }
+        ]
+      : []),
+    // 文件菜单
     {
       label: '文件',
       submenu: [
@@ -171,8 +193,9 @@ function createAppMenu(mainWindow) {
           label: '打开文件夹',
           accelerator: 'CmdOrCtrl+O',
           click: async () => {
-            const result = await dialog.showOpenDialog({
-              properties: ['openDirectory']
+            const result = await dialog.showOpenDialog(mainWindow, {
+              properties: ['openDirectory'],
+              title: '选择Markdown文件夹'
             })
             if (!result.canceled && result.filePaths.length > 0) {
               mainWindow.webContents.send('menu-open-folder', result.filePaths[0])
@@ -187,13 +210,18 @@ function createAppMenu(mainWindow) {
           }
         },
         { type: 'separator' },
-        {
-          label: '退出',
-          accelerator: 'CmdOrCtrl+Q',
-          role: 'quit'
-        }
+        ...(!isMac
+          ? [
+              {
+                label: '退出',
+                accelerator: 'Alt+F4',
+                role: 'quit'
+              }
+            ]
+          : [])
       ]
     },
+    // 分享菜单
     {
       label: '分享',
       submenu: [
@@ -206,12 +234,14 @@ function createAppMenu(mainWindow) {
         },
         {
           label: '停止分享',
+          accelerator: 'CmdOrCtrl+Shift+X',
           click: () => {
             mainWindow.webContents.send('menu-stop-share')
           }
         }
       ]
     },
+    // 编辑菜单
     {
       label: '编辑',
       submenu: [
@@ -221,9 +251,28 @@ function createAppMenu(mainWindow) {
         { role: 'cut', label: '剪切' },
         { role: 'copy', label: '复制' },
         { role: 'paste', label: '粘贴' },
-        { role: 'selectAll', label: '全选' }
+        ...(isMac
+          ? [
+              { role: 'pasteAndMatchStyle', label: '粘贴并匹配样式' },
+              { role: 'delete', label: '删除' },
+              { role: 'selectAll', label: '全选' },
+              { type: 'separator' },
+              {
+                label: '语音',
+                submenu: [
+                  { role: 'startSpeaking', label: '开始朗读' },
+                  { role: 'stopSpeaking', label: '停止朗读' }
+                ]
+              }
+            ]
+          : [
+              { role: 'delete', label: '删除' },
+              { type: 'separator' },
+              { role: 'selectAll', label: '全选' }
+            ])
       ]
     },
+    // 查看菜单
     {
       label: '查看',
       submenu: [
@@ -231,11 +280,52 @@ function createAppMenu(mainWindow) {
         { role: 'forceReload', label: '强制重新加载' },
         { role: 'toggleDevTools', label: '切换开发者工具' },
         { type: 'separator' },
-        { role: 'resetZoom', label: '重置缩放' },
+        { role: 'resetZoom', label: '实际大小' },
         { role: 'zoomIn', label: '放大' },
         { role: 'zoomOut', label: '缩小' },
         { type: 'separator' },
         { role: 'togglefullscreen', label: '切换全屏' }
+      ]
+    },
+    // 窗口菜单 (macOS)
+    ...(isMac
+      ? [
+          {
+            label: '窗口',
+            submenu: [
+              { role: 'minimize', label: '最小化' },
+              { role: 'zoom', label: '缩放' },
+              { type: 'separator' },
+              { role: 'front', label: '全部置于顶层' },
+              { type: 'separator' },
+              { role: 'window', label: '窗口' }
+            ]
+          }
+        ]
+      : []),
+    // 帮助菜单
+    {
+      label: '帮助',
+      submenu: [
+        {
+          label: '学习更多',
+          click: async () => {
+            await shell.openExternal('https://github.com/electron/electron')
+          }
+        },
+        { type: 'separator' },
+        {
+          label: '关于 Knowledge Base',
+          click: () => {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: '关于',
+              message: 'Knowledge Base',
+              detail: '一个基于 Electron 和 Vue 的 Markdown 知识库应用\n\n版本: 1.0.0',
+              buttons: ['确定']
+            })
+          }
+        }
       ]
     }
   ]
@@ -250,16 +340,20 @@ function createWindow() {
     width: 1400,
     height: 900,
     show: false,
-    autoHideMenuBar: false,
+    autoHideMenuBar: true, // 隐藏原生菜单栏，使用自定义 Vue 菜单
+    frame: false, // 无边框窗口，使用自定义标题栏
+    title: 'Knowledge Base',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false
     }
   })
 
-  // 创建应用菜单
-  createAppMenu(mainWindow)
+  // 移除原生应用菜单（使用 Vue 菜单栏替代）
+  Menu.setApplicationMenu(null)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -277,6 +371,8 @@ function createWindow() {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  return mainWindow
 }
 
 // This method will be called when Electron has finished
@@ -284,7 +380,7 @@ function createWindow() {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.electron.knowledgebase')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
@@ -534,6 +630,46 @@ app.whenReady().then(() => {
       return { success: true, stopped }
     } catch (error) {
       return { success: false, error: error.message }
+    }
+  })
+
+  // 窗口控制 IPC 处理器（用于自定义菜单栏）
+  ipcMain.handle('toggle-devtools', async (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (window) {
+      window.webContents.toggleDevTools()
+    }
+  })
+
+  ipcMain.handle('toggle-fullscreen', async (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (window) {
+      window.setFullScreen(!window.isFullScreen())
+    }
+  })
+
+  ipcMain.handle('minimize-window', async (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (window) {
+      window.minimize()
+    }
+  })
+
+  ipcMain.handle('maximize-window', async (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (window) {
+      if (window.isMaximized()) {
+        window.unmaximize()
+      } else {
+        window.maximize()
+      }
+    }
+  })
+
+  ipcMain.handle('close-window', async (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (window) {
+      window.close()
     }
   })
 
