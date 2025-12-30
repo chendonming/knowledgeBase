@@ -18,14 +18,21 @@ const markdownHtmlContent = ref('')
 const outlineCollapsed = getOutlineCollapsed()
 const themeMode = getThemeMode()
 const searchPanelRef = ref(null)
+const indexCheckingFolders = ref(new Set())  // 正在检查索引的文件夹集合
 
 // 提供全局状态
 provide('outlineCollapsed', outlineCollapsed)
 provide('themeMode', themeMode)
 
 // 初始化主题
-onMounted(() => {
+onMounted(async () => {
   initTheme()
+
+  // 应用启动时检查索引是否需要更新
+  // 这在后台进行，不阻塞用户界面
+  setTimeout(() => {
+    checkAllIndexesOnStartup()
+  }, 500)  // 延迟 500ms 以避免与其他初始化任务竞争
 })
 
 // 加载文件夹
@@ -74,6 +81,66 @@ const loadFolderHistory = async () => {
     folderHistory.value = history
   } catch (error) {
     console.error('Failed to load folder history:', error)
+  }
+}
+
+// 检查单个文件夹的索引是否需要更新
+const checkFolderIndexUpdate = async (folderPath) => {
+  if (!folderPath || indexCheckingFolders.value.has(folderPath)) {
+    return  // 已经在检查中或文件夹路径无效
+  }
+
+  indexCheckingFolders.value.add(folderPath)
+
+  try {
+    // 先检查索引状态
+    const statsResult = await window.api.getIndexStats()
+    const hasCachedIndex = statsResult.folders &&
+                          statsResult.folders.some(f => f.path === folderPath)
+
+    // 如果已有索引，检查是否需要更新
+    if (hasCachedIndex) {
+      const result = await window.api.checkIndexNeedsUpdate({ folderPath })
+
+      if (result.success && result.needsUpdate) {
+        console.log(`Index for ${folderPath} needs update, auto-refreshing...`)
+        // 后台刷新索引
+        await window.api.refreshSearchIndex({ folderPath })
+        console.log(`Index for ${folderPath} refreshed successfully`)
+      }
+    } else {
+      // 没有缓存，预构建索引（在后台，静默进行）
+      console.log(`No cached index for ${folderPath}, pre-building...`)
+      try {
+        await window.api.buildSearchIndex({ folderPath })
+        console.log(`Index pre-built for ${folderPath}`)
+      } catch (error) {
+        console.warn(`Failed to pre-build index for ${folderPath}:`, error)
+        // 预构建失败不影响应用，用户搜索时会构建
+      }
+    }
+  } catch (error) {
+    console.warn(`Failed to check index for ${folderPath}:`, error)
+  } finally {
+    indexCheckingFolders.value.delete(folderPath)
+  }
+}
+
+// 检查所有最近使用的文件夹的索引
+const checkAllIndexesOnStartup = async () => {
+  try {
+    // 获取最后使用的文件夹
+    const lastFolder = await window.api.getLastFolder()
+
+    if (lastFolder) {
+      console.log(`Checking index for last folder: ${lastFolder}`)
+      await checkFolderIndexUpdate(lastFolder)
+    }
+
+    // 也可以检查历史中的其他文件夹（可选，后台进行）
+    // 这里不检查全部是为了保持启动速度
+  } catch (error) {
+    console.error('Failed to check indexes on startup:', error)
   }
 }
 
@@ -243,6 +310,7 @@ onBeforeUnmount(() => {
       ref="searchPanelRef"
       :is-open="showSearch"
       :current-folder="currentFolder"
+      :checking-folders="indexCheckingFolders"
       @close="showSearch = false"
       @select-file="handleSelectFile"
     />

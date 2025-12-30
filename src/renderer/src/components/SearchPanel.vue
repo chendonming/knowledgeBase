@@ -9,6 +9,10 @@ const props = defineProps({
   currentFolder: {
     type: String,
     default: null
+  },
+  checkingFolders: {
+    type: Set,
+    default: () => new Set()
   }
 })
 
@@ -205,6 +209,15 @@ watch(
             </svg>
           </button>
           <div v-if="isSearching" class="search-spinner"></div>
+        </div>
+
+        <!-- 索引检查状态提示 -->
+        <div v-if="checkingFolders && checkingFolders.has(currentFolder)" class="index-checking-banner">
+          <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 6v6l4 2"></path>
+          </svg>
+          <span>正在检查索引是否有更新...</span>
         </div>
 
         <div v-if="!currentFolder" class="search-empty">
@@ -462,6 +475,28 @@ watch(
   border-top-color: var(--accent-color);
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
+}
+
+/* 索引检查状态提示 */
+.index-checking-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: var(--accent-color);
+  background: linear-gradient(90deg, rgba(76, 175, 80, 0.1), rgba(76, 175, 80, 0.05));
+  border-bottom: 1px solid var(--accent-color);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.index-checking-banner .spinner {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-color);
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
 }
 
 .search-empty,
