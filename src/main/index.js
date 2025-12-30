@@ -22,6 +22,18 @@ let activeConnections = new Set()
 let fileWatchers = new Map()
 let mainWindow = null
 
+// 停止监视所有文件
+const stopAllWatchers = () => {
+  for (const watcher of fileWatchers.values()) {
+    try {
+      watcher.close()
+    } catch (error) {
+      console.error('Error closing watcher:', error)
+    }
+  }
+  fileWatchers.clear()
+}
+
 // 获取本机局域网 IP
 const getLocalIP = () => {
   const interfaces = networkInterfaces()
@@ -449,17 +461,6 @@ app.whenReady().then(() => {
   })
 
   // 停止监视所有文件
-  const stopAllWatchers = () => {
-    for (const watcher of fileWatchers.values()) {
-      try {
-        watcher.close()
-      } catch (error) {
-        console.error('Error closing watcher:', error)
-      }
-    }
-    fileWatchers.clear()
-  }
-
   ipcMain.handle('read-directory', async (event, dirPath) => {
     try {
       const files = []
