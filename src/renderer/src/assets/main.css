@@ -1,0 +1,71 @@
+@import './base.css';
+
+/* CSS Variables for Dark Theme */
+:root {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252525;
+  --bg-tertiary: #2d2d2d;
+  --text-primary: #e8e8e8;
+  --text-secondary: #a0a0a0;
+  --text-tertiary: #707070;
+  --border-color: #3e3e3e;
+  --accent-color: #4a9eff;
+  --accent-hover: #66b1ff;
+  --sidebar-bg: #252525;
+  --header-bg: #1e1e1e;
+  --code-bg: #2d2d2d;
+  --hover-bg: #2d2d2d;
+  --selected-bg: #264f78;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+#app {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+code {
+  font-weight: 600;
+  padding: 3px 5px;
+  border-radius: 2px;
+  background-color: var(--code-bg);
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+  font-size: 85%;
+}
+
+/* Scrollbar styles - Dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
