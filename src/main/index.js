@@ -4,6 +4,12 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import fs from 'fs/promises'
 import path from 'path'
+import { existsSync, mkdirSync } from 'fs'
+
+// 获取应用数据目录
+const getUserDataPath = () => {
+  return app.getPath('userData')
+}
 
 function createWindow() {
   // Create the browser window.
@@ -150,7 +156,6 @@ app.whenReady().then(() => {
     }
   })
 
-  // Read image file and convert to base64
   ipcMain.handle('read-image', async (event, imagePath) => {
     try {
       console.log('imagePath: ', imagePath)
@@ -173,6 +178,105 @@ app.whenReady().then(() => {
       const dataUrl = `data:${mimeType};base64,${base64}`
 
       return { success: true, dataUrl }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 文件夹历史管理 IPC 处理器
+  const historyFile = path.join(getUserDataPath(), 'folderHistory.json')
+
+  // 读取文件夹历史
+  ipcMain.handle('get-folder-history', async () => {
+    try {
+      if (existsSync(historyFile)) {
+        const data = await fs.readFile(historyFile, 'utf-8')
+        return JSON.parse(data)
+      }
+      return []
+    } catch (error) {
+      return []
+    }
+  })
+
+  // 保存文件夹到历史
+  ipcMain.handle('add-folder-to-history', async (event, folderPath) => {
+    try {
+      let history = []
+      if (existsSync(historyFile)) {
+        const data = await fs.readFile(historyFile, 'utf-8')
+        history = JSON.parse(data)
+      }
+
+      // 移除重复项
+      history = history.filter(item => item !== folderPath)
+      // 添加到开头
+      history.unshift(folderPath)
+      // 只保留最近的 20 个
+      history = history.slice(0, 20)
+
+      // 确保目录存在
+      const dir = path.dirname(historyFile)
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true })
+      }
+
+      await fs.writeFile(historyFile, JSON.stringify(history, null, 2))
+      return { success: true, history }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 删除文件夹历史记录
+  ipcMain.handle('remove-folder-from-history', async (event, folderPath) => {
+    try {
+      let history = []
+      if (existsSync(historyFile)) {
+        const data = await fs.readFile(historyFile, 'utf-8')
+        history = JSON.parse(data)
+      }
+
+      history = history.filter(item => item !== folderPath)
+
+      const dir = path.dirname(historyFile)
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true })
+      }
+
+      await fs.writeFile(historyFile, JSON.stringify(history, null, 2))
+      return { success: true, history }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 获取最后使用的文件夹
+  ipcMain.handle('get-last-folder', async () => {
+    try {
+      const configFile = path.join(getUserDataPath(), 'lastFolder.json')
+      if (existsSync(configFile)) {
+        const data = await fs.readFile(configFile, 'utf-8')
+        const config = JSON.parse(data)
+        return config.lastFolder || null
+      }
+      return null
+    } catch (error) {
+      return null
+    }
+  })
+
+  // 保存最后使用的文件夹
+  ipcMain.handle('save-last-folder', async (event, folderPath) => {
+    try {
+      const configFile = path.join(getUserDataPath(), 'lastFolder.json')
+      const dir = path.dirname(configFile)
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true })
+      }
+
+      await fs.writeFile(configFile, JSON.stringify({ lastFolder: folderPath }, null, 2))
+      return { success: true }
     } catch (error) {
       return { success: false, error: error.message }
     }

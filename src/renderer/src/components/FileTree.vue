@@ -2,7 +2,12 @@
   <div class="file-tree">
     <div class="file-tree-header">
       <h3>Files</h3>
-      <button class="btn-select" @click="$emit('select-folder')">Select Folder</button>
+      <div class="header-actions">
+        <button class="btn-history" @click="$emit('show-history')" title="Folder History (Ctrl+H)">
+          📋
+        </button>
+        <button class="btn-select" @click="$emit('select-folder')">Select Folder</button>
+      </div>
     </div>
     <div class="tree-content">
       <TreeNode v-if="tree" :node="tree" :level="0" @select="handleSelect" />
@@ -12,7 +17,6 @@
 </template>
 
 <script setup>
-import { defineEmits } from 'vue'
 import TreeNode from './TreeNode.vue'
 
 defineProps({
@@ -22,7 +26,7 @@ defineProps({
   }
 })
 
-const emit = defineEmits(['select-folder', 'select-file'])
+const emit = defineEmits(['select-folder', 'select-file', 'show-history'])
 
 const handleSelect = (node) => {
   if (node.type === 'file') {
@@ -46,6 +50,7 @@ const handleSelect = (node) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
 .file-tree-header h3 {
@@ -53,6 +58,12 @@ const handleSelect = (node) => {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .btn-select {
@@ -64,10 +75,30 @@ const handleSelect = (node) => {
   cursor: pointer;
   font-size: 12px;
   transition: background-color 0.2s;
+  white-space: nowrap;
 }
 
 .btn-select:hover {
   background: var(--accent-hover);
+}
+
+.btn-history {
+  padding: 6px 10px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-history:hover {
+  background: var(--hover-bg);
+  border-color: var(--accent-color);
 }
 
 .tree-content {

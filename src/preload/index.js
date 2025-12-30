@@ -7,7 +7,13 @@ const api = {
   readDirectory: (dirPath) => ipcRenderer.invoke('read-directory', dirPath),
   readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
   getFileTree: (dirPath) => ipcRenderer.invoke('get-file-tree', dirPath),
-  readImage: (imagePath) => ipcRenderer.invoke('read-image', imagePath)
+  readImage: (imagePath) => ipcRenderer.invoke('read-image', imagePath),
+  // 文件夹历史 API
+  getFolderHistory: () => ipcRenderer.invoke('get-folder-history'),
+  addFolderToHistory: (folderPath) => ipcRenderer.invoke('add-folder-to-history', folderPath),
+  removeFolderFromHistory: (folderPath) => ipcRenderer.invoke('remove-folder-from-history', folderPath),
+  getLastFolder: () => ipcRenderer.invoke('get-last-folder'),
+  saveLastFolder: (folderPath) => ipcRenderer.invoke('save-last-folder', folderPath)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
