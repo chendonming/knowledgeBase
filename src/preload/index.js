@@ -19,6 +19,9 @@ const api = {
   stopShareServer: () => ipcRenderer.invoke('stop-share-server'),
   // 搜索功能 API
   searchFiles: ({ folderPath, query }) => ipcRenderer.invoke('search-files', { folderPath, query }),
+  // 文件监视 API
+  watchFile: (filePath) => ipcRenderer.invoke('watch-file', filePath),
+  unwatchFile: (filePath) => ipcRenderer.invoke('unwatch-file', filePath),
   // 窗口控制 API（用于自定义菜单栏）
   toggleDevTools: () => ipcRenderer.invoke('toggle-devtools'),
   toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
@@ -29,7 +32,9 @@ const api = {
   onMenuOpenFolder: (callback) => ipcRenderer.on('menu-open-folder', callback),
   onMenuOpenHistory: (callback) => ipcRenderer.on('menu-open-history', callback),
   onMenuCreateShare: (callback) => ipcRenderer.on('menu-create-share', callback),
-  onMenuStopShare: (callback) => ipcRenderer.on('menu-stop-share', callback)
+  onMenuStopShare: (callback) => ipcRenderer.on('menu-stop-share', callback),
+  // 文件变更事件监听器
+  onFileChanged: (callback) => ipcRenderer.on('file-changed', callback)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

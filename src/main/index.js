@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import fs from 'fs/promises'
 import path from 'path'
-import { existsSync, mkdirSync } from 'fs'
+import { existsSync, mkdirSync, watch } from 'fs'
 import http from 'http'
 import { networkInterfaces } from 'os'
 
@@ -17,6 +17,10 @@ const getUserDataPath = () => {
 let shareServer = null
 let currentSharedContent = null
 let activeConnections = new Set()
+
+// 文件监视器管理
+let fileWatchers = new Map()
+let mainWindow = null
 
 // 获取本机局域网 IP
 const getLocalIP = () => {
@@ -336,7 +340,7 @@ function createAppMenu(mainWindow) {
 
 function createWindow() {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     show: false,
@@ -402,6 +406,59 @@ app.whenReady().then(() => {
     }
     return null
   })
+
+  // 监视文件变化
+  ipcMain.handle('watch-file', async (event, filePath) => {
+    try {
+      // 如果已有该文件的监视器，先停止它
+      if (fileWatchers.has(filePath)) {
+        fileWatchers.get(filePath).close()
+      }
+
+      const watcher = watch(filePath, (eventType, filename) => {
+        // 过滤掉 rename 事件（文件名变更）
+        if (eventType === 'change') {
+          // 发送文件变更事件到渲染进程
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('file-changed', {
+              filePath: filePath,
+              timestamp: Date.now()
+            })
+          }
+        }
+      })
+
+      fileWatchers.set(filePath, watcher)
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 停止监视文件
+  ipcMain.handle('unwatch-file', async (event, filePath) => {
+    try {
+      if (fileWatchers.has(filePath)) {
+        fileWatchers.get(filePath).close()
+        fileWatchers.delete(filePath)
+      }
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 停止监视所有文件
+  const stopAllWatchers = () => {
+    for (const watcher of fileWatchers.values()) {
+      try {
+        watcher.close()
+      } catch (error) {
+        console.error('Error closing watcher:', error)
+      }
+    }
+    fileWatchers.clear()
+  }
 
   ipcMain.handle('read-directory', async (event, dirPath) => {
     try {
@@ -769,6 +826,8 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   // 停止分享服务器
   stopShareServer()
+  // 停止所有文件监视器
+  stopAllWatchers()
 
   if (process.platform !== 'darwin') {
     app.quit()

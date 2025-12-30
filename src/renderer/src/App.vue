@@ -130,6 +130,21 @@ const handleMenuStopShare = () => {
   window.dispatchEvent(new CustomEvent('menu-stop-share'))
 }
 
+// 处理文件变更并刷新文件树
+const handleFolderFileChanged = async () => {
+  // 重新加载当前文件夹的文件树
+  if (currentFolder.value) {
+    try {
+      const result = await window.api.getFileTree(currentFolder.value)
+      if (result.success) {
+        fileTree.value = result.tree
+      }
+    } catch (error) {
+      console.error('Failed to refresh file tree:', error)
+    }
+  }
+}
+
 // 初始化
 onMounted(async () => {
   // 初始化UI状态
@@ -160,6 +175,9 @@ onMounted(async () => {
   window.api.onMenuOpenHistory(handleMenuOpenHistory)
   window.api.onMenuCreateShare(handleMenuCreateShare)
   window.api.onMenuStopShare(handleMenuStopShare)
+
+  // 监听文件变更事件并刷新文件树
+  window.api.onFileChanged(handleFolderFileChanged)
 })
 
 // 清理事件监听

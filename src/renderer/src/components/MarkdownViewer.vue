@@ -142,15 +142,33 @@ const handleMenuStopShare = async () => {
   }
 }
 
+// 处理文件变更事件
+const handleFileChanged = async () => {
+  // 重新加载文件
+  if (props.filePath) {
+    await loadFile()
+  }
+}
+
 // 监听菜单事件
 onMounted(() => {
   window.addEventListener('menu-create-share', handleMenuCreateShare)
   window.addEventListener('menu-stop-share', handleMenuStopShare)
+  // 监听文件变更事件
+  window.api.onFileChanged(handleFileChanged)
+  // 开始监视当前文件
+  if (props.filePath) {
+    window.api.watchFile(props.filePath)
+  }
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('menu-create-share', handleMenuCreateShare)
   window.removeEventListener('menu-stop-share', handleMenuStopShare)
+  // 停止监视当前文件
+  if (props.filePath) {
+    window.api.unwatchFile(props.filePath)
+  }
 })
 
 const formatDate = (dateStr) => {
@@ -377,10 +395,19 @@ watch(htmlContent, async (newContent) => {
 
 watch(() => props.filePath, loadFile, { immediate: true })
 
-// 当文件路径改变时，停止分享
+// 当文件路径改变时，更新文件监视和停止分享
 watch(
   () => props.filePath,
-  () => {
+  (newPath, oldPath) => {
+    // 停止监视旧文件
+    if (oldPath) {
+      window.api.unwatchFile(oldPath)
+    }
+    // 开始监视新文件
+    if (newPath) {
+      window.api.watchFile(newPath)
+    }
+    // 停止分享
     if (shareUrl.value) {
       stopSharing()
     }
