@@ -56,8 +56,14 @@ const handleSelectFolder = async () => {
   }
 }
 
-const handleSelectFile = (node) => {
-  selectedFilePath.value = node.path
+const handleSelectFile = (target) => {
+  const path = typeof target === 'string' ? target : target?.path
+
+  if (path) {
+    selectedFilePath.value = path
+  } else {
+    console.warn('Invalid file selection', target)
+  }
 }
 
 // 加载文件夹历史
