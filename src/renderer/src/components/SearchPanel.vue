@@ -20,6 +20,8 @@ const isSearching = ref(false)
 const totalResults = ref(0)
 const searchError = ref(null)
 const isRefreshing = ref(false)
+const indexStats = ref(null)
+const showIndexStats = ref(false)
 
 // 执行搜索
 const performSearch = async (forceRefresh = false) => {
@@ -94,6 +96,8 @@ const refreshIndex = async () => {
       if (searchQuery.value.trim()) {
         await performSearch(true)  // 使用 forceRefresh=true
       }
+      // 更新索引统计信息
+      await loadIndexStats()
     } else {
       searchError.value = result.error || '索引刷新失败'
     }
@@ -101,6 +105,16 @@ const refreshIndex = async () => {
     searchError.value = error.message || '索引刷新出错'
   } finally {
     isRefreshing.value = false
+  }
+}
+
+// 加载索引统计信息
+const loadIndexStats = async () => {
+  try {
+    const stats = await window.api.getIndexStats()
+    indexStats.value = stats
+  } catch (error) {
+    console.error('Failed to load index stats:', error)
   }
 }
 
@@ -136,6 +150,8 @@ watch(
       setTimeout(() => {
         searchInputRef.value?.focus()
       }, 100)
+      // 打开搜索面板时加载索引统计
+      loadIndexStats()
     }
   }
 )
@@ -247,6 +263,53 @@ watch(
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- 索引状态显示 -->
+        <div class="index-status">
+          <button
+            class="status-toggle"
+            @click="showIndexStats = !showIndexStats"
+            :title="showIndexStats ? '隐藏索引状态' : '显示索引状态'"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="19" cy="12" r="1"></circle>
+              <circle cx="5" cy="12" r="1"></circle>
+            </svg>
+            <span>索引状态</span>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              :class="{ 'rotate-180': showIndexStats }"
+            >
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+
+          <Transition name="slide">
+            <div v-if="showIndexStats && indexStats" class="status-content">
+              <div class="status-item">
+                <span class="status-label">缓存文件夹</span>
+                <span class="status-value">{{ indexStats.totalFolders }}</span>
+              </div>
+
+              <div v-if="indexStats.folders && indexStats.folders.length > 0" class="status-folders">
+                <div v-for="(folder, index) in indexStats.folders" :key="index" class="folder-item">
+                  <div class="folder-path">📁 {{ folder.path }}</div>
+                  <div class="folder-stats">
+                    <span class="file-count">📄 {{ folder.fileCount }} 个文件</span>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="status-empty">
+                <p>暂无缓存索引</p>
+              </div>
+            </div>
+          </Transition>
         </div>
       </div>
     </div>
@@ -574,5 +637,127 @@ watch(
 
 .results-list::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
+}
+
+/* 索引状态样式 */
+.index-status {
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.status-toggle {
+  width: 100%;
+  padding: 12px 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.status-toggle:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.status-toggle svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.status-toggle svg:last-child {
+  margin-left: auto;
+  transition: transform 0.2s;
+}
+
+.status-toggle svg.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.status-content {
+  padding: 12px 24px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.status-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.status-value {
+  color: var(--accent-color);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.status-folders {
+  margin-top: 12px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+
+.folder-item {
+  padding: 8px 0;
+  border-radius: 4px;
+  background: var(--bg-primary);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.folder-path {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 500;
+  word-break: break-all;
+  margin-bottom: 4px;
+}
+
+.folder-stats {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 12px;
+}
+
+.file-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-empty {
+  text-align: center;
+  padding: 20px 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.2s ease;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>
