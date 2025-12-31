@@ -20,6 +20,17 @@ let shareServer = null
 let currentSharedContent = null
 let activeConnections = new Set()
 
+// 常见图片 MIME 映射
+const imageMimeTypes = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp'
+}
+
 // 文件监视器管理
 let fileWatchers = new Map()
 let mainWindow = null
@@ -50,19 +61,58 @@ const getLocalIP = () => {
   return 'localhost'
 }
 
-// 创建分享服务器（复用渲染端样式，保持一致体验）
-const createShareServer = ({ htmlContent, title, themeId = 'dark' }) => {
-  return new Promise((resolve, reject) => {
-    // 如果已有服务器在运行，先关闭
-    if (shareServer) {
-      stopShareServer()
+// 将 html 中标记的本地图片(data-local-image)转为 base64 内联，便于分享页面展示
+const inlineLocalImages = async (htmlContent) => {
+  if (!htmlContent) return htmlContent
+
+  const imgRegex = /<img\b[^>]*data-local-image=["']([^"']+)["'][^>]*>/gi
+  let processed = htmlContent
+
+  const matches = Array.from(processed.matchAll(imgRegex))
+
+  for (const match of matches) {
+    const originalTag = match[0]
+    const imagePath = match[1]
+
+    try {
+      const buffer = await fs.readFile(imagePath)
+      const ext = path.extname(imagePath).toLowerCase()
+      const mimeType = imageMimeTypes[ext] || 'image/jpeg'
+      const dataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`
+
+      let newTag = originalTag
+        // 移除 data-local-image 属性
+        .replace(/data-local-image=["'][^"']*["']\s*/i, '')
+        // 移除已有 src（如果存在且为空）
+        .replace(/src=["'][^"']*["']\s*/i, '')
+
+      newTag = newTag.replace('<img', `<img src="${dataUrl}"`)
+
+      processed = processed.replace(originalTag, newTag)
+    } catch (error) {
+      console.warn('[share] Failed to inline image:', imagePath, error.message)
     }
+  }
 
-    currentSharedContent = { htmlContent, title, themeId }
-    activeConnections = new Set()
+  return processed
+}
 
-    const fullHtml = buildShareHtml({ htmlContent, title, themeId })
+// 创建分享服务器（复用渲染端样式，保持一致体验）
+const createShareServer = async ({ htmlContent, title, themeId = 'dark' }) => {
+  // 如果已有服务器在运行，先关闭
+  if (shareServer) {
+    stopShareServer()
+  }
 
+  // 将本地图片内联成 data URL，确保分享页可见
+  const processedHtml = await inlineLocalImages(htmlContent)
+
+  currentSharedContent = { htmlContent: processedHtml, title, themeId }
+  activeConnections = new Set()
+
+  const fullHtml = buildShareHtml({ htmlContent: processedHtml, title, themeId })
+
+  return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
       // 设置 CORS 头，允许跨域访问
       res.setHeader('Access-Control-Allow-Origin', '*')
@@ -320,17 +370,7 @@ app.whenReady().then(() => {
 
       // 获取文件扩展名来确定 MIME 类型
       const ext = path.extname(imagePath).toLowerCase()
-      const mimeTypes = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.svg': 'image/svg+xml',
-        '.webp': 'image/webp',
-        '.bmp': 'image/bmp'
-      }
-
-      const mimeType = mimeTypes[ext] || 'image/jpeg'
+      const mimeType = imageMimeTypes[ext] || 'image/jpeg'
       const dataUrl = `data:${mimeType};base64,${base64}`
 
       return { success: true, dataUrl }
