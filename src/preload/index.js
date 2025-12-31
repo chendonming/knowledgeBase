@@ -6,6 +6,8 @@ const api = {
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   readDirectory: (dirPath) => ipcRenderer.invoke('read-directory', dirPath),
   readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
+  saveFile: ({ filePath, content, rootDir }) =>
+    ipcRenderer.invoke('save-file', { filePath, content, rootDir }),
   getFileTree: (dirPath) => ipcRenderer.invoke('get-file-tree', dirPath),
   readImage: (imagePath) => ipcRenderer.invoke('read-image', imagePath),
   // 文件夹历史 API

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, provide, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, provide } from 'vue'
 import MenuBar from './components/MenuBar.vue'
 import FileTree from './components/FileTree.vue'
 import MarkdownViewer from './components/MarkdownViewer.vue'
@@ -8,7 +8,7 @@ import SearchPanel from './components/SearchPanel.vue'
 import Outline from './components/Outline.vue'
 import AlertModal from './components/AlertModal.vue'
 import { initializeUIState, getOutlineCollapsed, initTheme, getThemeMode } from './stores/uiState'
-import { alertState, confirmAlert } from './stores/alertService'
+import { alertState, confirmAlert, showAlert } from './stores/alertService'
 
 const fileTree = ref(null)
 const selectedFilePath = ref(null)
@@ -23,6 +23,7 @@ const themeMode = getThemeMode()
 const searchPanelRef = ref(null)
 const indexCheckingFolders = ref(new Set()) // 正在检查索引的文件夹集合
 const alertStore = alertState
+const isEditing = ref(false)
 
 // 提供全局状态
 provide('outlineCollapsed', outlineCollapsed)
@@ -73,6 +74,7 @@ const handleSelectFile = (target) => {
 
   if (path) {
     selectedFilePath.value = path
+    isEditing.value = false
   } else {
     console.warn('Invalid file selection', target)
   }
@@ -219,6 +221,19 @@ const handleMenuStopShare = () => {
   window.dispatchEvent(new CustomEvent('menu-stop-share'))
 }
 
+// 切换编辑模式
+const handleToggleEdit = async () => {
+  if (!selectedFilePath.value) {
+    await showAlert({
+      title: '提示',
+      message: '请先选择一个 Markdown 文件再进入编辑模式',
+      type: 'warning'
+    })
+    return
+  }
+  isEditing.value = !isEditing.value
+}
+
 // 刷新搜索索引
 const handleRefreshIndex = () => {
   if (searchPanelRef.value && searchPanelRef.value.refreshIndex) {
@@ -292,6 +307,7 @@ onBeforeUnmount(() => {
       @create-share="handleMenuCreateShare"
       @stop-share="handleMenuStopShare"
       @toggle-sidebar="handleToggleSidebar"
+      @toggle-edit="handleToggleEdit"
     />
     <div class="app-main">
       <div class="sidebar" :class="{ collapsed: sidebarCollapsed }">
@@ -304,6 +320,8 @@ onBeforeUnmount(() => {
       <div class="main-content">
         <MarkdownViewer
           :file-path="selectedFilePath"
+          :editing="isEditing"
+          :root-folder="currentFolder"
           @html-updated="markdownHtmlContent = $event"
         />
       </div>

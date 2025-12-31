@@ -3,7 +3,6 @@
     <div v-if="loading" class="loading">Loading...</div>
     <div v-else-if="error" class="error">Error: {{ error }}</div>
     <div v-else>
-      <!-- Frontmatter metadata display -->
       <div v-if="frontmatter" class="frontmatter-card">
         <h1 v-if="frontmatter.title" class="fm-title">{{ frontmatter.title }}</h1>
         <div class="fm-meta">
@@ -16,14 +15,23 @@
           <span v-if="frontmatter.author" class="fm-author"> ✍️ {{ frontmatter.author }} </span>
         </div>
       </div>
-      <!-- Markdown content -->
-      <article class="markdown-body" v-html="htmlContent"></article>
+
+      <div v-if="isEditing" class="editor-wrapper">
+        <MarkdownEditor
+          v-model="editorContent"
+          :theme="monacoTheme"
+          language="markdown"
+          @save="saveFile"
+        />
+      </div>
+
+      <article v-else class="markdown-body" v-html="htmlContent"></article>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
@@ -35,6 +43,7 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeStringify from 'rehype-stringify'
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/atom-one-dark.css'
+import MarkdownEditor from './MarkdownEditor.vue'
 import { getThemeMode } from '../stores/uiState'
 import { showAlert } from '../stores/alertService'
 
@@ -42,6 +51,14 @@ const props = defineProps({
   filePath: {
     type: String,
     default: null
+  },
+  rootFolder: {
+    type: String,
+    default: null
+  },
+  editing: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -49,9 +66,17 @@ const emit = defineEmits(['html-updated'])
 
 const htmlContent = ref('')
 const frontmatter = ref(null)
+const rawContent = ref('')
+const editorContent = ref('')
 const loading = ref(false)
 const error = ref(null)
+const isEditing = ref(false)
+const saving = ref(false)
 const themeMode = getThemeMode()
+
+const monacoTheme = computed(() => (themeMode.value === 'light' ? 'vs' : 'vs-dark'))
+
+const hasUnsavedChanges = computed(() => isEditing.value && editorContent.value !== rawContent.value)
 
 // 分享功能相关状态
 const shareUrl = ref('')
@@ -178,7 +203,15 @@ const handleMenuStopShare = async () => {
 
 // 处理文件变更事件
 const handleFileChanged = async () => {
-  // 重新加载文件
+  if (isEditing.value && hasUnsavedChanges.value) {
+    await showAlert({
+      title: '文件已被修改',
+      message: '检测到文件在外部发生变更，请先保存或退出编辑后再刷新。',
+      type: 'warning'
+    })
+    return
+  }
+
   if (props.filePath) {
     await loadFile()
   }
@@ -414,6 +447,8 @@ const loadFile = async () => {
   if (!props.filePath) {
     htmlContent.value = '<p>Select a file to view</p>'
     frontmatter.value = null
+    rawContent.value = ''
+    editorContent.value = ''
     emit('html-updated', '')
     return
   }
@@ -425,6 +460,8 @@ const loadFile = async () => {
   try {
     const result = await window.api.readFile(props.filePath)
     if (result.success) {
+      rawContent.value = result.content
+      editorContent.value = result.content
       htmlContent.value = await parseMarkdown(result.content)
       // 触发事件，通知大纲组件更新
       emit('html-updated', htmlContent.value)
@@ -437,6 +474,60 @@ const loadFile = async () => {
     emit('html-updated', '')
   } finally {
     loading.value = false
+  }
+}
+
+const enterEditMode = async () => {
+  if (!props.filePath || loading.value) return
+
+  if (!rawContent.value) {
+    await loadFile()
+  }
+
+  editorContent.value = rawContent.value
+  isEditing.value = true
+}
+
+const exitEditMode = () => {
+  isEditing.value = false
+  editorContent.value = rawContent.value
+}
+
+const saveFile = async (content) => {
+  if (!props.filePath) return
+
+  saving.value = true
+  try {
+    const payload = {
+      filePath: props.filePath,
+      rootDir: props.rootFolder,
+      content: content ?? editorContent.value
+    }
+
+    const result = await window.api.saveFile(payload)
+
+    if (!result?.success) {
+      throw new Error(result?.error || '保存失败')
+    }
+
+    rawContent.value = payload.content
+    editorContent.value = payload.content
+    htmlContent.value = await parseMarkdown(payload.content)
+    emit('html-updated', htmlContent.value)
+
+    await showAlert({
+      title: '保存成功',
+      message: '文件已保存',
+      type: 'success'
+    })
+  } catch (err) {
+    await showAlert({
+      title: '保存失败',
+      message: err.message || '未知错误',
+      type: 'error'
+    })
+  } finally {
+    saving.value = false
   }
 }
 
@@ -566,7 +657,28 @@ watch(htmlContent, async (newContent) => {
   }
 })
 
-watch(() => props.filePath, loadFile, { immediate: true })
+watch(
+  () => props.editing,
+  (val) => {
+    if (val) {
+      enterEditMode()
+    } else {
+      exitEditMode()
+    }
+  }
+)
+
+watch(
+  () => props.filePath,
+  async () => {
+    isEditing.value = false
+    saving.value = false
+    rawContent.value = ''
+    editorContent.value = ''
+    await loadFile()
+  },
+  { immediate: true }
+)
 
 // 当文件路径改变时，更新文件监视和停止分享
 watch(
@@ -594,6 +706,13 @@ watch(
   overflow-y: auto;
   padding: 24px;
   background: var(--bg-primary);
+}
+
+.editor-wrapper {
+  height: calc(100vh - 200px);
+  min-height: 400px;
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
 .loading,

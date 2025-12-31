@@ -11,7 +11,8 @@ const emit = defineEmits([
   'stop-share',
   'open-search',
   'refresh-index',
-  'toggle-sidebar'
+  'toggle-sidebar',
+  'toggle-edit'
 ])
 const themeMode = inject('themeMode', ref('dark'))
 
@@ -57,6 +58,8 @@ const menus = ref([
     id: 'edit',
     label: '编辑',
     items: [
+      { id: 'toggle-edit', label: '切换编辑模式', accelerator: 'Ctrl+E', action: 'toggle-edit' },
+      { type: 'separator' },
       { id: 'undo', label: '撤销', accelerator: 'Ctrl+Z', action: 'undo' },
       { id: 'redo', label: '重做', accelerator: 'Ctrl+Y', action: 'redo' },
       { type: 'separator' },
@@ -213,6 +216,9 @@ const handleMenuItemClick = async (action) => {
       break
     case 'toggle-sidebar':
       emit('toggle-sidebar')
+      break
+    case 'toggle-edit':
+      emit('toggle-edit')
       break
     case 'theme-dark':
       setThemeMode('dark')

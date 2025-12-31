@@ -317,6 +317,47 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('save-file', async (event, payload) => {
+    try {
+      const { filePath, content, rootDir } = payload || {}
+
+      if (!filePath || typeof filePath !== 'string') {
+        return { success: false, error: 'Invalid file path' }
+      }
+
+      const normalizedPath = path.normalize(filePath)
+
+      if (!path.isAbsolute(normalizedPath)) {
+        return { success: false, error: 'Path must be absolute' }
+      }
+
+      if (path.extname(normalizedPath).toLowerCase() !== '.md') {
+        return { success: false, error: 'Only markdown files can be saved' }
+      }
+
+      const realFilePath = await fs.realpath(normalizedPath)
+
+      if (rootDir && typeof rootDir === 'string') {
+        const normalizedRoot = path.normalize(rootDir)
+        const realRoot = await fs.realpath(normalizedRoot).catch(() => null)
+
+        if (!realRoot) {
+          return { success: false, error: 'Invalid root directory' }
+        }
+
+        const rootWithSep = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep
+        if (!(realFilePath === realRoot || realFilePath.startsWith(rootWithSep))) {
+          return { success: false, error: 'Access denied: file is outside the current folder' }
+        }
+      }
+
+      await fs.writeFile(realFilePath, content ?? '', 'utf-8')
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle('get-file-tree', async (event, dirPath) => {
     try {
       const isHiddenEntry = (name) => name.startsWith('.')
