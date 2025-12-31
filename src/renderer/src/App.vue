@@ -20,7 +20,7 @@ const markdownHtmlContent = ref('')
 const outlineCollapsed = getOutlineCollapsed()
 const themeMode = getThemeMode()
 const searchPanelRef = ref(null)
-const indexCheckingFolders = ref(new Set())  // 正在检查索引的文件夹集合
+const indexCheckingFolders = ref(new Set()) // 正在检查索引的文件夹集合
 const alertStore = alertState
 
 // 提供全局状态
@@ -35,7 +35,7 @@ onMounted(async () => {
   // 这在后台进行，不阻塞用户界面
   setTimeout(() => {
     checkAllIndexesOnStartup()
-  }, 500)  // 延迟 500ms 以避免与其他初始化任务竞争
+  }, 500) // 延迟 500ms 以避免与其他初始化任务竞争
 })
 
 // 加载文件夹
@@ -90,7 +90,7 @@ const loadFolderHistory = async () => {
 // 检查单个文件夹的索引是否需要更新
 const checkFolderIndexUpdate = async (folderPath) => {
   if (!folderPath || indexCheckingFolders.value.has(folderPath)) {
-    return  // 已经在检查中或文件夹路径无效
+    return // 已经在检查中或文件夹路径无效
   }
 
   indexCheckingFolders.value.add(folderPath)
@@ -98,8 +98,8 @@ const checkFolderIndexUpdate = async (folderPath) => {
   try {
     // 先检查索引状态
     const statsResult = await window.api.getIndexStats()
-    const hasCachedIndex = statsResult.folders &&
-                          statsResult.folders.some(f => f.path === folderPath)
+    const hasCachedIndex =
+      statsResult.folders && statsResult.folders.some((f) => f.path === folderPath)
 
     // 如果已有索引，检查是否需要更新
     if (hasCachedIndex) {
