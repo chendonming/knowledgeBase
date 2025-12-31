@@ -390,9 +390,85 @@ const loadLocalImages = async () => {
   }
 }
 
+// 为代码块添加复制按钮
+const addCopyButtonsToCodeBlocks = async () => {
+  await nextTick()
+
+  const codeBlocks = document.querySelectorAll('.markdown-viewer pre')
+
+  codeBlocks.forEach((pre) => {
+    // 避免重复添加
+    if (pre.querySelector('.code-copy-btn')) return
+
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'code-copy-btn'
+    button.textContent = '复制'
+
+    let resetTimer = null
+
+    const setCopiedState = () => {
+      button.textContent = '已复制'
+      button.classList.add('copied')
+      if (resetTimer) clearTimeout(resetTimer)
+      resetTimer = setTimeout(() => {
+        button.textContent = '复制'
+        button.classList.remove('copied')
+      }, 2000)
+    }
+
+    const setFailedState = () => {
+      button.textContent = '复制失败'
+      button.classList.add('failed')
+      if (resetTimer) clearTimeout(resetTimer)
+      resetTimer = setTimeout(() => {
+        button.textContent = '复制'
+        button.classList.remove('failed')
+      }, 2000)
+    }
+
+    button.addEventListener('click', async (event) => {
+      event.stopPropagation()
+
+      const codeElement = pre.querySelector('code')
+      const text = codeElement ? codeElement.innerText : pre.innerText
+      if (!text) return
+
+      try {
+        await navigator.clipboard.writeText(text)
+        setCopiedState()
+      } catch (err) {
+        // 回退方案
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        textarea.style.pointerEvents = 'none'
+        document.body.appendChild(textarea)
+        textarea.select()
+        try {
+          document.execCommand('copy')
+          setCopiedState()
+        } catch (fallbackErr) {
+          console.error('Copy failed:', fallbackErr || err)
+          setFailedState()
+        } finally {
+          document.body.removeChild(textarea)
+        }
+      }
+    })
+
+    pre.appendChild(button)
+  })
+}
+
 // 监听 htmlContent 变化，当内容更新后加载图片
 watch(htmlContent, async (newContent) => {
-  if (newContent && newContent.includes('data-local-image')) {
+  if (!newContent) return
+
+  await addCopyButtonsToCodeBlocks()
+
+  if (newContent.includes('data-local-image')) {
     console.log('HTML content updated, loading images...')
     await nextTick()
     await nextTick()
@@ -569,6 +645,7 @@ watch(
   border: 1px solid var(--border-color);
   margin: 16px 0;
   line-height: 1.5;
+  position: relative;
 }
 
 .markdown-body :deep(pre code) {
@@ -577,6 +654,43 @@ watch(
   color: #e8e8e8;
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
+}
+
+.markdown-body :deep(.code-copy-btn) {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.markdown-body :deep(pre:hover .code-copy-btn),
+.markdown-body :deep(.code-copy-btn:focus) {
+  opacity: 1;
+}
+
+.markdown-body :deep(.code-copy-btn:hover) {
+  background: var(--accent-color);
+  color: #fff;
+}
+
+.markdown-body :deep(.code-copy-btn.copied) {
+  background: #4caf50;
+  color: #fff;
+  border-color: #4caf50;
+}
+
+.markdown-body :deep(.code-copy-btn.failed) {
+  background: #f56c6c;
+  color: #fff;
+  border-color: #f56c6c;
 }
 
 .markdown-body :deep(ul),
