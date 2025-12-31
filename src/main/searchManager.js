@@ -44,10 +44,7 @@ export class FileSearchManager {
    */
   getFileStatsPath(folderPath) {
     // 使用文件夹路径的 hash 作为文件名
-    const hash = require('crypto')
-      .createHash('md5')
-      .update(folderPath)
-      .digest('hex')
+    const hash = require('crypto').createHash('md5').update(folderPath).digest('hex')
     return path.join(this.cacheDir, `stats-${hash}.json`)
   }
 
