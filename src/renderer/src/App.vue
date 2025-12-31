@@ -194,6 +194,10 @@ const handleKeyDown = (event) => {
   }
 }
 
+const handleToggleSidebar = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
 // 处理菜单命令
 const handleMenuOpenFolder = async (event, folderPath) => {
   if (folderPath) {
@@ -287,6 +291,7 @@ onBeforeUnmount(() => {
       @refresh-index="handleRefreshIndex"
       @create-share="handleMenuCreateShare"
       @stop-share="handleMenuStopShare"
+      @toggle-sidebar="handleToggleSidebar"
     />
     <div class="app-main">
       <div class="sidebar" :class="{ collapsed: sidebarCollapsed }">
@@ -356,7 +361,8 @@ onBeforeUnmount(() => {
   width: 300px;
   flex-shrink: 0;
   transform: translateX(0);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+  transition:
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;

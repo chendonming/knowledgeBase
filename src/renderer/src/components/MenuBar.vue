@@ -10,7 +10,8 @@ const emit = defineEmits([
   'create-share',
   'stop-share',
   'open-search',
-  'refresh-index'
+  'refresh-index',
+  'toggle-sidebar'
 ])
 const themeMode = inject('themeMode', ref('dark'))
 
@@ -93,6 +94,12 @@ const menus = ref([
         label: '切换全屏',
         accelerator: 'F11',
         action: 'toggle-fullscreen'
+      },
+      {
+        id: 'toggle-sidebar',
+        label: '显示/隐藏文件树',
+        accelerator: 'Ctrl+B',
+        action: 'toggle-sidebar'
       },
       { type: 'separator' },
       {
@@ -203,6 +210,9 @@ const handleMenuItemClick = async (action) => {
       if (window.api && window.api.toggleFullscreen) {
         window.api.toggleFullscreen()
       }
+      break
+    case 'toggle-sidebar':
+      emit('toggle-sidebar')
       break
     case 'theme-dark':
       setThemeMode('dark')
