@@ -319,16 +319,28 @@ app.whenReady().then(() => {
 
   ipcMain.handle('get-file-tree', async (event, dirPath) => {
     try {
-      async function buildTree(currentPath) {
+      const isHiddenEntry = (name) => name.startsWith('.')
+
+      async function buildTree(currentPath, isRoot = false) {
         const stat = await fs.stat(currentPath)
         const name = path.basename(currentPath)
 
+        if (!isRoot && isHiddenEntry(name)) {
+          return null
+        }
+
         if (stat.isFile()) {
+          const ext = path.extname(name).toLowerCase()
+
+          if (ext !== '.md') {
+            return null
+          }
+
           return {
             name,
             path: currentPath,
             type: 'file',
-            extension: path.extname(name)
+            extension: ext
           }
         }
 
@@ -338,7 +350,14 @@ app.whenReady().then(() => {
 
           for (const entry of entries) {
             const childPath = path.join(currentPath, entry.name)
-            children.push(await buildTree(childPath))
+            const childNode = await buildTree(childPath)
+            if (childNode) {
+              children.push(childNode)
+            }
+          }
+
+          if (!isRoot && children.length === 0) {
+            return null
           }
 
           return {
@@ -353,9 +372,11 @@ app.whenReady().then(() => {
             })
           }
         }
+
+        return null
       }
 
-      const tree = await buildTree(dirPath)
+      const tree = await buildTree(dirPath, true)
       return { success: true, tree }
     } catch (error) {
       return { success: false, error: error.message }
