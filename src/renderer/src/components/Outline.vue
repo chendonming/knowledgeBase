@@ -131,7 +131,7 @@ watch(
 .toggle-btn-side {
   position: absolute;
   left: 8px;
-  top: 50%;
+  top: 26px;
   transform: translateY(-50%);
   padding: 8px 10px;
   font-size: 12px;
@@ -157,7 +157,7 @@ watch(
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 16px;
+  padding: 16px 50px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-tertiary);
   min-height: 56px;
