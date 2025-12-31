@@ -31,8 +31,10 @@ import remarkFrontmatter from 'remark-frontmatter'
 import remarkMath from 'remark-math'
 import remarkRehype from 'remark-rehype'
 import rehypeKatex from 'rehype-katex'
+import rehypeHighlight from 'rehype-highlight'
 import rehypeStringify from 'rehype-stringify'
 import 'katex/dist/katex.min.css'
+import 'highlight.js/styles/atom-one-dark.css'
 
 const props = defineProps({
   filePath: {
@@ -305,6 +307,11 @@ const parseMarkdown = async (markdown) => {
     .use(remarkGfm)
     .use(remarkMath) // 添加数学公式支持
     .use(remarkRehype)
+    .use(rehypeHighlight, {
+      // 配置代码高亮选项
+      detect: true, // 自动检测语言
+      prefix: 'hljs-' // 给 CSS class 加前缀
+    })
     .use(rehypeKatex) // 使用 KaTeX 渲染公式
     .use(rehypeFixImagePaths)
     .use(rehypeStringify)
@@ -560,12 +567,16 @@ watch(
   border-radius: 6px;
   overflow-x: auto;
   border: 1px solid var(--border-color);
+  margin: 16px 0;
+  line-height: 1.5;
 }
 
 .markdown-body :deep(pre code) {
   background-color: transparent;
   padding: 0;
   color: #e8e8e8;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
 }
 
 .markdown-body :deep(ul),
