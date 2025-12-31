@@ -332,6 +332,63 @@ const parseMarkdown = async (markdown) => {
     }
   }
 
+  // 为标题生成唯一、可跳转的 id，便于大纲定位
+  const rehypeAddHeadingIds = () => {
+    return (tree) => {
+      const slugCounts = new Map()
+
+      const slugify = (text) => {
+        return (
+          text
+            .toLowerCase()
+            // 保留中英文、数字与空格/连字符，其余移除
+            .replace(/[^a-z0-9\u4e00-\u9fa5\s-]/g, '')
+            .trim()
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+        )
+      }
+
+      const ensureUniqueSlug = (base) => {
+        const count = slugCounts.get(base) || 0
+        slugCounts.set(base, count + 1)
+        return count === 0 ? base : `${base}-${count}`
+      }
+
+      const extractText = (node) => {
+        if (!node) return ''
+        if (node.type === 'text') return node.value || ''
+        if (node.children) {
+          return node.children.map((child) => extractText(child)).join(' ')
+        }
+        return ''
+      }
+
+      const visit = (node) => {
+        if (node.type === 'element' && /^h[1-6]$/.test(node.tagName)) {
+          const textContent = extractText(node).trim()
+
+          if (textContent) {
+            const baseSlug = slugify(textContent)
+            const finalSlug = baseSlug ? ensureUniqueSlug(baseSlug) : ensureUniqueSlug('heading')
+
+            if (!node.properties) node.properties = {}
+            // 如果已有 id，尊重用户定义
+            if (!node.properties.id) {
+              node.properties.id = finalSlug
+            }
+          }
+        }
+
+        if (node.children) {
+          node.children.forEach(visit)
+        }
+      }
+
+      visit(tree)
+    }
+  }
+
   // 处理 markdown 内容
   const processor = unified()
     .use(remarkParse)
@@ -339,6 +396,7 @@ const parseMarkdown = async (markdown) => {
     .use(remarkGfm)
     .use(remarkMath) // 添加数学公式支持
     .use(remarkRehype)
+    .use(rehypeAddHeadingIds) // 为标题添加 id，配合大纲跳转
     .use(rehypeHighlight, {
       // 配置代码高亮选项
       detect: true, // 自动检测语言
@@ -700,7 +758,10 @@ watch(
   font-size: 12px;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
 .markdown-body :deep(pre:hover .code-copy-btn),

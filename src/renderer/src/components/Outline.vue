@@ -74,18 +74,39 @@ const extractHeadings = (htmlContent) => {
   headings.value = extractedHeadings
 }
 
-// 滚动到指定标题
+// 滚动到指定标题，保持菜单栏可见
 const scrollToHeading = (headingId) => {
-  // 在当前的markdown-viewer中查找元素
-  const element = document.querySelector(`#${headingId}`)
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    // 高亮显示
-    element.classList.add('outline-highlight')
-    setTimeout(() => {
-      element.classList.remove('outline-highlight')
-    }, 2000)
+  const escapeSelector = (id) => {
+    try {
+      return CSS.escape(id)
+    } catch (e) {
+      return id.replace(/([ #;?%&,.+*~':"!^$\[{\}()|\/])/g, '\\$1')
+    }
   }
+
+  const container = document.querySelector('.markdown-viewer')
+  const selector = `#${escapeSelector(headingId)}`
+  const element = container?.querySelector(selector) || document.querySelector(selector)
+
+  if (!element) return
+
+  // 优先在 markdown 容器内滚动，避免整体页面滚动导致菜单栏离开视野
+  if (container) {
+    const containerRect = container.getBoundingClientRect()
+    const targetRect = element.getBoundingClientRect()
+    const offsetTop = targetRect.top - containerRect.top + container.scrollTop
+    const topWithPadding = Math.max(offsetTop - 12, 0) // 留一点顶部间距
+
+    container.scrollTo({ top: topWithPadding, behavior: 'smooth' })
+  } else {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+  }
+
+  // 高亮显示
+  element.classList.add('outline-highlight')
+  setTimeout(() => {
+    element.classList.remove('outline-highlight')
+  }, 2000)
 }
 
 // 切换大纲展开/收起
