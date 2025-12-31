@@ -35,6 +35,7 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeStringify from 'rehype-stringify'
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/atom-one-dark.css'
+import { getThemeMode } from '../stores/uiState'
 
 const props = defineProps({
   filePath: {
@@ -49,6 +50,7 @@ const htmlContent = ref('')
 const frontmatter = ref(null)
 const loading = ref(false)
 const error = ref(null)
+const themeMode = getThemeMode()
 
 // 分享功能相关状态
 const shareUrl = ref('')
@@ -67,7 +69,8 @@ const createShareLink = async () => {
     const title = frontmatter.value?.title || props.filePath?.split('\\').pop() || 'Markdown 文档'
     const result = await window.api.createShareLink({
       htmlContent: htmlContent.value,
-      title
+      title,
+      themeId: themeMode.value
     })
 
     if (result.success) {

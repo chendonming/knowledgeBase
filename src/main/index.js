@@ -8,6 +8,7 @@ import { existsSync, mkdirSync, watch } from 'fs'
 import http from 'http'
 import { networkInterfaces } from 'os'
 import { searchManager } from './searchManager.js'
+import { buildShareHtml } from './shareTemplate.js'
 
 // 获取应用数据目录
 const getUserDataPath = () => {
@@ -49,86 +50,23 @@ const getLocalIP = () => {
   return 'localhost'
 }
 
-// 创建分享服务器
-const createShareServer = (htmlContent, title) => {
+// 创建分享服务器（复用渲染端样式，保持一致体验）
+const createShareServer = ({ htmlContent, title, themeId = 'dark' }) => {
   return new Promise((resolve, reject) => {
     // 如果已有服务器在运行，先关闭
     if (shareServer) {
       stopShareServer()
     }
 
-    currentSharedContent = { htmlContent, title }
+    currentSharedContent = { htmlContent, title, themeId }
     activeConnections = new Set()
+
+    const fullHtml = buildShareHtml({ htmlContent, title, themeId })
 
     const server = http.createServer((req, res) => {
       // 设置 CORS 头，允许跨域访问
       res.setHeader('Access-Control-Allow-Origin', '*')
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
-
-      // 创建完整的 HTML 页面
-      const fullHtml = `
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title || 'Markdown 预览'}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.5.0/github-markdown.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-  <style>
-    body {
-      margin: 0;
-      padding: 20px;
-      background-color: #f6f8fa;
-    }
-    .container {
-      max-width: 980px;
-      margin: 0 auto;
-      background: white;
-      padding: 45px;
-      border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
-    }
-    .markdown-body {
-      box-sizing: border-box;
-      min-width: 200px;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #e1e4e8;
-    }
-    .header h1 {
-      margin: 0;
-      color: #24292e;
-    }
-    .footer {
-      text-align: center;
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e1e4e8;
-      color: #586069;
-      font-size: 14px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>📄 ${title || 'Markdown 文档'}</h1>
-    </div>
-    <article class="markdown-body">
-      ${htmlContent}
-    </article>
-    <div class="footer">
-      由 KnowledgeBase 应用生成并分享
-    </div>
-  </div>
-</body>
-</html>
-      `
-
       res.end(fullHtml)
     })
 
@@ -501,9 +439,9 @@ app.whenReady().then(() => {
   })
 
   // 分享功能 IPC 处理器
-  ipcMain.handle('create-share-link', async (event, { htmlContent, title }) => {
+  ipcMain.handle('create-share-link', async (event, { htmlContent, title, themeId = 'dark' }) => {
     try {
-      const { url, port } = await createShareServer(htmlContent, title)
+      const { url, port } = await createShareServer({ htmlContent, title, themeId })
       return { success: true, url, port }
     } catch (error) {
       return { success: false, error: error.message }
