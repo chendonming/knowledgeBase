@@ -1,7 +1,7 @@
 {
   "name": "knowledgebase",
-  "version": "1.0.1",
-  "description": "An Electron application with Vue",
+  "version": "1.0.2",
+  "description": "知识库文档查看器",
   "main": "./out/main/index.js",
   "author": "example.com",
   "homepage": "https://electron-vite.org",
