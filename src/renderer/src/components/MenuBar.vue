@@ -34,7 +34,6 @@ const menus = ref([
     items: [
       { id: 'open-folder', label: '打开文件夹', accelerator: 'Ctrl+O', action: 'open-folder' },
       { id: 'open-history', label: '打开历史记录', accelerator: 'Ctrl+H', action: 'open-history' },
-      { id: 'open-search', label: '搜索文件', accelerator: 'Ctrl+F', action: 'open-search' },
       { id: 'refresh-index', label: '刷新索引', accelerator: 'Ctrl+Shift+I', action: 'refresh-index' },
       { type: 'separator' },
       { id: 'quit', label: '退出', accelerator: 'Alt+F4', action: 'quit' }
@@ -252,6 +251,11 @@ const handleClose = () => {
   }
 }
 
+const triggerSearch = () => {
+  closeMenu()
+  emit('open-search')
+}
+
 // 点击外部关闭菜单
 const handleClickOutside = (event) => {
   if (activeMenu.value && !event.target.closest('.menu-bar')) {
@@ -284,6 +288,16 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <div class="menu-search" role="button" tabindex="0" @click="triggerSearch" @keydown.enter.prevent="triggerSearch" @keydown.space.prevent="triggerSearch">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"></circle>
+        <line x1="16" y1="16" x2="21" y2="21"></line>
+      </svg>
+      <span class="search-placeholder">搜索文件</span>
+      <span class="search-shortcut">Ctrl+F</span>
+    </div>
+
     <div class="window-controls">
       <button class="window-control-btn minimize" title="最小化" @click="handleMinimize">
         <svg width="12" height="12" viewBox="0 0 12 12">
@@ -360,9 +374,10 @@ onBeforeUnmount(() => {
   height: 40px;
   background: linear-gradient(180deg, var(--menubar-bg-start) 0%, var(--menubar-bg-end) 100%);
   border-bottom: 1px solid var(--menubar-border);
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
+  column-gap: 12px;
   user-select: none;
   position: relative;
   z-index: 1000;
@@ -370,12 +385,14 @@ onBeforeUnmount(() => {
   transition:
     background 0.3s ease,
     border-color 0.3s ease;
+  padding: 0 8px;
 }
 
 .menu-bar-content {
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  gap: 12px;
+  padding: 0 4px;
   -webkit-app-region: no-drag;
 }
 
@@ -413,6 +430,61 @@ onBeforeUnmount(() => {
 .menu-item.active {
   background-color: var(--menubar-hover-bg);
   color: var(--text-primary);
+}
+
+.menu-search {
+  height: 28px;
+  max-width: 420px;
+  min-width: 220px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: var(--input-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--menubar-border);
+  border-radius: 14px;
+  color: var(--menubar-text);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+.menu-search:hover,
+.menu-search:focus-visible {
+  background: var(--menubar-hover-bg);
+  border-color: var(--dropdown-border);
+  color: var(--text-primary);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  outline: none;
+}
+
+.search-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0.8;
+}
+
+.search-placeholder {
+  flex: 1;
+  font-size: 13px;
+  color: inherit;
+}
+
+.search-shortcut {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 4px 6px;
+  border: 1px solid var(--menubar-border);
+  line-height: 1;
 }
 
 .window-controls {
