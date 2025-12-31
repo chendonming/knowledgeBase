@@ -6,7 +6,9 @@ import MarkdownViewer from './components/MarkdownViewer.vue'
 import FolderHistory from './components/FolderHistory.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import Outline from './components/Outline.vue'
+import AlertModal from './components/AlertModal.vue'
 import { initializeUIState, getOutlineCollapsed, initTheme, getThemeMode } from './stores/uiState'
+import { alertState, confirmAlert } from './stores/alertService'
 
 const fileTree = ref(null)
 const selectedFilePath = ref(null)
@@ -19,6 +21,7 @@ const outlineCollapsed = getOutlineCollapsed()
 const themeMode = getThemeMode()
 const searchPanelRef = ref(null)
 const indexCheckingFolders = ref(new Set())  // 正在检查索引的文件夹集合
+const alertStore = alertState
 
 // 提供全局状态
 provide('outlineCollapsed', outlineCollapsed)
@@ -313,6 +316,14 @@ onBeforeUnmount(() => {
       :checking-folders="indexCheckingFolders"
       @close="showSearch = false"
       @select-file="handleSelectFile"
+    />
+
+    <AlertModal
+      :visible="alertStore.visible"
+      :title="alertStore.title"
+      :message="alertStore.message"
+      :type="alertStore.type"
+      @confirm="confirmAlert"
     />
   </div>
 </template>

@@ -2,6 +2,7 @@
 import { ref, onMounted, onBeforeUnmount, inject } from 'vue'
 import { setThemeMode } from '../stores/uiState'
 import { getThemeList } from '../themes/themeConfig'
+import { showAlert } from '../stores/alertService'
 
 const emit = defineEmits([
   'open-folder',
@@ -223,7 +224,11 @@ const handleMenuItemClick = async (action) => {
       window.open('https://github.com/electron/electron', '_blank')
       break
     case 'about':
-      alert('Knowledge Base\n\n一个基于 Electron 和 Vue 的 Markdown 知识库应用\n\n版本: 1.0.0')
+      await showAlert({
+        title: '关于',
+        message: 'Knowledge Base\n\n一个基于 Electron 和 Vue 的 Markdown 知识库应用\n\n版本: 1.0.0',
+        type: 'info'
+      })
       break
   }
 }

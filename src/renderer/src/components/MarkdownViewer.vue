@@ -36,6 +36,7 @@ import rehypeStringify from 'rehype-stringify'
 import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/atom-one-dark.css'
 import { getThemeMode } from '../stores/uiState'
+import { showAlert } from '../stores/alertService'
 
 const props = defineProps({
   filePath: {
@@ -76,10 +77,18 @@ const createShareLink = async () => {
     if (result.success) {
       shareUrl.value = result.url
     } else {
-      alert('生成分享链接失败: ' + result.error)
+      await showAlert({
+        title: '分享失败',
+        message: '生成分享链接失败: ' + result.error,
+        type: 'error'
+      })
     }
   } catch (err) {
-    alert('生成分享链接失败: ' + err.message)
+    await showAlert({
+      title: '分享失败',
+      message: '生成分享链接失败: ' + err.message,
+      type: 'error'
+    })
   } finally {
     isCreatingShare.value = false
   }
@@ -92,7 +101,11 @@ const stopSharing = async () => {
     shareUrl.value = ''
     copied.value = false
   } catch (err) {
-    alert('停止分享失败: ' + err.message)
+    await showAlert({
+      title: '停止分享失败',
+      message: '停止分享失败: ' + err.message,
+      type: 'error'
+    })
   }
 }
 
@@ -126,14 +139,22 @@ const copyShareLink = async () => {
 // 处理菜单创建分享事件
 const handleMenuCreateShare = async () => {
   if (!htmlContent.value) {
-    alert('请先选择一个 Markdown 文件')
+    await showAlert({
+      title: '提示',
+      message: '请先选择一个 Markdown 文件',
+      type: 'warning'
+    })
     return
   }
   await createShareLink()
   if (shareUrl.value) {
     // 复制到剪贴板并提示
     await copyShareLink()
-    alert(`分享链接已生成并复制到剪贴板:\n${shareUrl.value}`)
+    await showAlert({
+      title: '分享已生成',
+      message: `分享链接已生成并复制到剪贴板:\n${shareUrl.value}`,
+      type: 'success'
+    })
   }
 }
 
@@ -141,9 +162,17 @@ const handleMenuCreateShare = async () => {
 const handleMenuStopShare = async () => {
   if (shareUrl.value) {
     await stopSharing()
-    alert('分享已停止')
+    await showAlert({
+      title: '分享已停止',
+      message: '分享已停止',
+      type: 'info'
+    })
   } else {
-    alert('当前没有正在分享的文档')
+    await showAlert({
+      title: '提示',
+      message: '当前没有正在分享的文档',
+      type: 'warning'
+    })
   }
 }
 
