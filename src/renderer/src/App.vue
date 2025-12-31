@@ -16,6 +16,7 @@ const currentFolder = ref(null)
 const folderHistory = ref([])
 const showHistory = ref(false)
 const showSearch = ref(false)
+const sidebarCollapsed = ref(false)
 const markdownHtmlContent = ref('')
 const outlineCollapsed = getOutlineCollapsed()
 const themeMode = getThemeMode()
@@ -186,6 +187,11 @@ const handleKeyDown = (event) => {
     event.preventDefault()
     showSearch.value = !showSearch.value
   }
+  // Ctrl+B 隐藏/显示侧边栏
+  if ((event.ctrlKey || event.metaKey) && key === 'b') {
+    event.preventDefault()
+    sidebarCollapsed.value = !sidebarCollapsed.value
+  }
 }
 
 // 处理菜单命令
@@ -283,7 +289,7 @@ onBeforeUnmount(() => {
       @stop-share="handleMenuStopShare"
     />
     <div class="app-main">
-      <div class="sidebar">
+      <div class="sidebar" :class="{ collapsed: sidebarCollapsed }">
         <FileTree
           :tree="fileTree"
           :selected-path="selectedFilePath"
@@ -349,6 +355,18 @@ onBeforeUnmount(() => {
 .sidebar {
   width: 300px;
   flex-shrink: 0;
+  transform: translateX(0);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.sidebar.collapsed {
+  width: 0;
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .main-content {
