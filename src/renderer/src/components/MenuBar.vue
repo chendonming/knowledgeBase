@@ -295,7 +295,7 @@ onBeforeUnmount(() => {
         <line x1="16" y1="16" x2="21" y2="21"></line>
       </svg>
       <span class="search-placeholder">搜索文件</span>
-      <span class="search-shortcut">Ctrl+F</span>
+      <span class="search-shortcut">Ctrl+P</span>
     </div>
 
     <div class="window-controls">

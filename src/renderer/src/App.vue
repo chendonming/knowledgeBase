@@ -174,13 +174,15 @@ const removeFromHistory = async (folderPath) => {
 
 // 监听全局快捷键
 const handleKeyDown = (event) => {
+  const key = event.key?.toLowerCase?.()
+
   // Ctrl+H 打开文件夹历史 (现在由菜单处理，保留以防万一)
-  if ((event.ctrlKey || event.metaKey) && event.key === 'h') {
+  if ((event.ctrlKey || event.metaKey) && key === 'h') {
     event.preventDefault()
     showHistory.value = !showHistory.value
   }
-  // Ctrl+F 打开搜索面板
-  if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+  // Ctrl+P 打开搜索面板（避免占用浏览器内置 Ctrl+F 页面查找）
+  if ((event.ctrlKey || event.metaKey) && key === 'p') {
     event.preventDefault()
     showSearch.value = !showSearch.value
   }
