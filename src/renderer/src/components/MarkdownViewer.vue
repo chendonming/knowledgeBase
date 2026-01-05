@@ -76,7 +76,9 @@ const themeMode = getThemeMode()
 
 const monacoTheme = computed(() => (themeMode.value === 'light' ? 'vs' : 'vs-dark'))
 
-const hasUnsavedChanges = computed(() => isEditing.value && editorContent.value !== rawContent.value)
+const hasUnsavedChanges = computed(
+  () => isEditing.value && editorContent.value !== rawContent.value
+)
 
 // 分享功能相关状态
 const shareUrl = ref('')
@@ -422,6 +424,24 @@ const parseMarkdown = async (markdown) => {
     }
   }
 
+  // 为链接添加 target="_blank"，使其在外部浏览器中打开
+  const rehypeAddLinkTargets = () => {
+    return (tree) => {
+      const visit = (node) => {
+        if (node.type === 'element' && node.tagName === 'a') {
+          if (!node.properties) node.properties = {}
+          node.properties.target = '_blank'
+        }
+
+        if (node.children) {
+          node.children.forEach(visit)
+        }
+      }
+
+      visit(tree)
+    }
+  }
+
   // 处理 markdown 内容
   const processor = unified()
     .use(remarkParse)
@@ -437,6 +457,7 @@ const parseMarkdown = async (markdown) => {
     })
     .use(rehypeKatex) // 使用 KaTeX 渲染公式
     .use(rehypeFixImagePaths)
+    .use(rehypeAddLinkTargets) // 为链接添加 target="_blank"
     .use(rehypeStringify)
 
   const result = await processor.process(content)
@@ -907,110 +928,50 @@ watch(
 
 .markdown-body :deep(ul),
 .markdown-body :deep(ol) {
-  margin: 0 0 16px 0;
+  margin: 0 0 16px 1.5em;
   padding: 0;
   color: var(--text-primary);
-  list-style: none;
 }
 
-.markdown-body :deep(ul > li),
-.markdown-body :deep(ol > li) {
-  position: relative;
-  margin: 0 0 8px 0;
-  padding-left: 28px;
+.markdown-body :deep(ul) {
+  list-style: disc;
+}
+
+.markdown-body :deep(ol) {
+  list-style: decimal;
+}
+
+.markdown-body :deep(li) {
+  margin: 6px 0;
   color: var(--text-primary);
-}
-
-.markdown-body :deep(ul > li::before) {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 12px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent-color);
-  box-shadow: 0 0 0 3px var(--bg-secondary);
-}
-
-.markdown-body :deep(ul > li::after) {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 22px;
-  width: 2px;
-  height: calc(100% - 22px);
-  background: var(--border-color);
-}
-
-.markdown-body :deep(ul > li:last-child::after) {
-  display: none;
 }
 
 .markdown-body :deep(ul ul),
 .markdown-body :deep(ul ol),
 .markdown-body :deep(ol ul),
 .markdown-body :deep(ol ol) {
-  margin-top: 8px;
-  margin-bottom: 0;
-}
-
-.markdown-body :deep(ol) {
-  counter-reset: md-counter;
-}
-
-.markdown-body :deep(ol > li) {
-  counter-increment: md-counter;
-}
-
-.markdown-body :deep(ol > li::before) {
-  content: counter(md-counter) '.';
-  position: absolute;
-  left: 0;
-  top: 0;
-  font-weight: 700;
-  color: var(--accent-color);
-}
-
-.markdown-body :deep(ol > li::after) {
-  content: '';
-  position: absolute;
-  left: 6px;
-  top: 22px;
-  width: 2px;
-  height: calc(100% - 22px);
-  background: var(--border-color);
-}
-
-.markdown-body :deep(ol > li:last-child::after) {
-  display: none;
+  margin: 6px 0 6px 1.25em;
 }
 
 /* 任务列表样式 */
 .markdown-body :deep(ul.contains-task-list) {
-  padding: 0;
-  margin: 0 0 16px 0;
   list-style: none;
+  padding-left: 0.25em;
 }
 
 .markdown-body :deep(li.task-list-item) {
   list-style: none;
-  padding-left: 34px;
-  margin: 0 0 8px 0;
+  margin: 6px 0;
+  padding-left: 1.8em;
   position: relative;
-}
-
-.markdown-body :deep(li.task-list-item::before),
-.markdown-body :deep(li.task-list-item::after) {
-  display: none;
 }
 
 .markdown-body :deep(li.task-list-item > input[type='checkbox']) {
   position: absolute;
   left: 0;
-  top: 6px;
-  width: 18px;
-  height: 18px;
+  top: 0.1em;
+  width: 1.1em;
+  height: 1.1em;
   margin: 0;
   cursor: pointer;
   accent-color: var(--accent-color);
