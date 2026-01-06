@@ -1085,7 +1085,7 @@ const scrollToMatch = (index) => {
 
 .markdown-body :deep(code) {
   background-color: var(--code-bg);
-  color: #e8e8e8;
+  color: var(--code-text-color);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Courier New', monospace;
@@ -1106,7 +1106,7 @@ const scrollToMatch = (index) => {
 .markdown-body :deep(pre code) {
   background-color: transparent;
   padding: 0;
-  color: #e8e8e8;
+  color: var(--code-text-color);
   font-family: 'Courier New', monospace;
   font-size: 0.9em;
 }
@@ -1293,8 +1293,8 @@ const scrollToMatch = (index) => {
 /* 搜索相关样式 */
 .search-overlay {
   position: fixed;
-  top: 0;
-  right: 0;
+  top: 20px;
+  right: 20px;
   left: 0;
   z-index: 1000;
   background: rgba(0, 0, 0, 0.1);

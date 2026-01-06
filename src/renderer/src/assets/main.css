@@ -14,6 +14,7 @@
   --sidebar-bg: #252525;
   --header-bg: #1e1e1e;
   --code-bg: #2d2d2d;
+  --code-text-color: #e8e8e8;
   --hover-bg: #2d2d2d;
   --selected-bg: #264f78;
   --menubar-bg-start: #2d2d30;
@@ -40,6 +41,7 @@
   --sidebar-bg: #f3f3f3;
   --header-bg: #ffffff;
   --code-bg: #f0f0f0;
+  --code-text-color: #1e1e1e;
   --hover-bg: #e8e8e8;
   --selected-bg: #e0e7ff;
   --menubar-bg-start: #f3f3f3;
@@ -66,6 +68,7 @@
   --sidebar-bg: #1a2332;
   --header-bg: #0f1621;
   --code-bg: #253447;
+  --code-text-color: #e3f2fd;
   --hover-bg: #1e2d42;
   --selected-bg: #1e3a5f;
   --menubar-bg-start: #1a2332;
@@ -92,6 +95,7 @@
   --sidebar-bg: #1a2d1f;
   --header-bg: #0d1b0f;
   --code-bg: #284033;
+  --code-text-color: #e0f7e0;
   --hover-bg: #1f3424;
   --selected-bg: #1f4526;
   --menubar-bg-start: #1a2d1f;
@@ -118,6 +122,7 @@
   --sidebar-bg: #2d1b45;
   --header-bg: #1a0f2e;
   --code-bg: #402860;
+  --code-text-color: #f3e5f5;
   --hover-bg: #3a2455;
   --selected-bg: #45315a;
   --menubar-bg-start: #2d1b45;
