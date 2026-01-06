@@ -745,7 +745,7 @@ const addCopyButtonsToCodeBlocks = async () => {
   })
 }
 
-// 监听 htmlContent 变化，当内容更新后加载图片
+// 监听 htmlContent 变化，当内容更新后加载图片和重新搜索
 watch(htmlContent, async (newContent) => {
   if (!newContent) return
 
@@ -756,6 +756,14 @@ watch(htmlContent, async (newContent) => {
     await nextTick()
     await nextTick()
     await loadLocalImages()
+  }
+
+  // 如果搜索框是打开的且有搜索关键词，重新执行搜索
+  if (isSearchOpen.value && searchQuery.value.trim()) {
+    console.log('HTML content updated, re-executing search...')
+    await nextTick()
+    await nextTick()
+    performSearch()
   }
 })
 
@@ -797,6 +805,16 @@ watch(
     // 停止分享
     if (shareUrl.value) {
       stopSharing()
+    }
+    // 清除搜索状态和结果
+    clearSearchHighlights()
+    searchMatches.value = []
+    currentMatchIndex.value = -1
+    // 如果搜索框是打开的且有搜索关键词，重新执行搜索
+    if (isSearchOpen.value && searchQuery.value.trim()) {
+      nextTick(() => {
+        performSearch()
+      })
     }
   }
 )
