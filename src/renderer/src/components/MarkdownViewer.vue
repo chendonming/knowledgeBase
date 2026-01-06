@@ -27,6 +27,67 @@
 
       <article v-else class="markdown-body" v-html="htmlContent"></article>
     </div>
+
+    <!-- 搜索覆盖层 -->
+    <Transition name="search">
+      <div v-if="isSearchOpen" class="search-overlay" @click.self="closeSearch">
+        <div class="search-container">
+          <div class="search-input-group">
+            <svg
+              class="search-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="M21 21l-4.35-4.35"></path>
+            </svg>
+            <input
+              ref="searchInputRef"
+              v-model="searchQuery"
+              type="text"
+              class="search-input"
+              placeholder="在文档中搜索..."
+              @keydown.enter="nextMatch"
+              @keydown.escape="closeSearch"
+              @keydown.arrow-up.prevent="prevMatch"
+              @keydown.arrow-down.prevent="nextMatch"
+              @input="performSearch"
+            />
+            <div class="search-stats" v-if="searchMatches.length > 0">
+              {{ currentMatchIndex + 1 }} / {{ searchMatches.length }}
+            </div>
+            <button
+              class="search-btn"
+              @click="prevMatch"
+              :disabled="searchMatches.length === 0"
+              title="上一个匹配"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+            </button>
+            <button
+              class="search-btn"
+              @click="nextMatch"
+              :disabled="searchMatches.length === 0"
+              title="下一个匹配"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <button class="search-btn close-btn" @click="closeSearch" title="关闭搜索">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -73,6 +134,13 @@ const error = ref(null)
 const isEditing = ref(false)
 const saving = ref(false)
 const themeMode = getThemeMode()
+
+// 搜索相关状态
+const isSearchOpen = ref(false)
+const searchQuery = ref('')
+const searchMatches = ref([])
+const currentMatchIndex = ref(-1)
+const searchInputRef = ref(null)
 
 const monacoTheme = computed(() => (themeMode.value === 'light' ? 'vs' : 'vs-dark'))
 
@@ -219,10 +287,22 @@ const handleFileChanged = async () => {
   }
 }
 
-// 监听菜单事件
+// 处理键盘事件
+const handleKeyDown = (event) => {
+  // Ctrl+F 或 Cmd+F 打开搜索
+  if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+    event.preventDefault()
+    if (!isEditing.value) {
+      openSearch()
+    }
+  }
+}
+
+// 监听菜单事件和键盘事件
 onMounted(() => {
   window.addEventListener('menu-create-share', handleMenuCreateShare)
   window.addEventListener('menu-stop-share', handleMenuStopShare)
+  window.addEventListener('keydown', handleKeyDown)
   // 监听文件变更事件
   window.api.onFileChanged(handleFileChanged)
   // 开始监视当前文件
@@ -234,6 +314,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('menu-create-share', handleMenuCreateShare)
   window.removeEventListener('menu-stop-share', handleMenuStopShare)
+  window.removeEventListener('keydown', handleKeyDown)
   // 停止监视当前文件
   if (props.filePath) {
     window.api.unwatchFile(props.filePath)
@@ -719,6 +800,150 @@ watch(
     }
   }
 )
+
+// 搜索相关方法
+const openSearch = () => {
+  isSearchOpen.value = true
+  searchQuery.value = ''
+  searchMatches.value = []
+  currentMatchIndex.value = -1
+  nextTick(() => {
+    searchInputRef.value?.focus()
+  })
+}
+
+const closeSearch = () => {
+  isSearchOpen.value = false
+  clearSearchHighlights()
+  searchQuery.value = ''
+  searchMatches.value = []
+  currentMatchIndex.value = -1
+}
+
+const performSearch = () => {
+  clearSearchHighlights()
+  searchMatches.value = []
+
+  if (!searchQuery.value.trim()) {
+    currentMatchIndex.value = -1
+    return
+  }
+
+  const query = searchQuery.value.trim()
+  const markdownBody = document.querySelector('.markdown-body')
+
+  if (!markdownBody) return
+
+  // 获取所有文本节点
+  const textNodes = []
+  const walk = (node) => {
+    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+      textNodes.push(node)
+    } else if (
+      node.nodeType === Node.ELEMENT_NODE &&
+      !['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(node.tagName)
+    ) {
+      node.childNodes.forEach(walk)
+    }
+  }
+  walk(markdownBody)
+
+  // 在文本节点中搜索匹配
+  textNodes.forEach((textNode) => {
+    const text = textNode.textContent
+    const regex = new RegExp(query, 'gi')
+    let match
+    while ((match = regex.exec(text)) !== null) {
+      searchMatches.value.push({
+        node: textNode,
+        start: match.index,
+        end: match.index + match[0].length,
+        text: match[0]
+      })
+    }
+  })
+
+  // 高亮匹配
+  highlightMatches()
+
+  // 如果有匹配，跳转到第一个
+  if (searchMatches.value.length > 0) {
+    currentMatchIndex.value = 0
+    scrollToMatch(0)
+  }
+}
+
+const highlightMatches = () => {
+  searchMatches.value.forEach((match, index) => {
+    const range = document.createRange()
+    range.setStart(match.node, match.start)
+    range.setEnd(match.node, match.end)
+
+    const highlight = document.createElement('mark')
+    highlight.className = 'search-highlight'
+    if (index === currentMatchIndex.value) {
+      highlight.className += ' current-match'
+    }
+    highlight.textContent = match.text
+
+    range.deleteContents()
+    range.insertNode(highlight)
+  })
+}
+
+const clearSearchHighlights = () => {
+  const highlights = document.querySelectorAll('.search-highlight')
+  highlights.forEach((highlight) => {
+    const text = document.createTextNode(highlight.textContent)
+    highlight.parentNode.replaceChild(text, highlight)
+  })
+}
+
+const nextMatch = () => {
+  if (searchMatches.value.length === 0) return
+
+  currentMatchIndex.value = (currentMatchIndex.value + 1) % searchMatches.value.length
+  updateHighlight()
+  scrollToMatch(currentMatchIndex.value)
+}
+
+const prevMatch = () => {
+  if (searchMatches.value.length === 0) return
+
+  currentMatchIndex.value =
+    currentMatchIndex.value <= 0 ? searchMatches.value.length - 1 : currentMatchIndex.value - 1
+  updateHighlight()
+  scrollToMatch(currentMatchIndex.value)
+}
+
+const updateHighlight = () => {
+  // 移除当前高亮
+  const currentHighlights = document.querySelectorAll('.search-highlight.current-match')
+  currentHighlights.forEach((el) => el.classList.remove('current-match'))
+
+  // 添加新高亮
+  if (currentMatchIndex.value >= 0) {
+    const highlights = document.querySelectorAll('.search-highlight')
+    if (highlights[currentMatchIndex.value]) {
+      highlights[currentMatchIndex.value].classList.add('current-match')
+    }
+  }
+}
+
+const scrollToMatch = (index) => {
+  if (index < 0 || index >= searchMatches.value.length) return
+
+  const highlights = document.querySelectorAll('.search-highlight')
+  const targetHighlight = highlights[index]
+
+  if (targetHighlight) {
+    targetHighlight.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+      inline: 'nearest'
+    })
+  }
+}
 </script>
 
 <style scoped>
@@ -1063,5 +1288,144 @@ watch(
 
 .markdown-body :deep(em) {
   color: var(--text-primary);
+}
+
+/* 搜索相关样式 */
+.search-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(2px);
+  animation: searchFadeIn 0.15s ease-out;
+}
+
+.search-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 400px;
+  max-width: calc(100vw - 40px);
+}
+
+.search-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.search-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  min-width: 0;
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.search-stats {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.search-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.search-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.search-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.search-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.close-btn {
+  color: var(--text-secondary);
+}
+
+.close-btn:hover {
+  background: #f56c6c;
+  color: white;
+}
+
+/* 搜索高亮样式 */
+.search-highlight {
+  background: rgba(255, 208, 0, 0.3);
+  color: var(--text-primary);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.search-highlight.current-match {
+  background: rgba(76, 175, 80, 0.4);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+/* 搜索动画 */
+@keyframes searchFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.search-enter-active,
+.search-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.search-enter-from,
+.search-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>
