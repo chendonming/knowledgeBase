@@ -26,7 +26,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   node: {
@@ -51,6 +51,54 @@ const isExpanded = ref(props.level === 0)
 const isSelected = computed(() => {
   return props.node.type === 'file' && props.node.path === props.selectedPath
 })
+
+// 检查选中的文件是否在当前节点的子树中
+const hasSelectedFileInSubtree = computed(() => {
+  if (!props.selectedPath) return false
+
+  if (props.node.type === 'file') {
+    return props.node.path === props.selectedPath
+  }
+
+  if (props.node.type === 'directory' && props.node.children) {
+    return props.node.children.some((child) => {
+      if (child.type === 'file') {
+        return child.path === props.selectedPath
+      }
+      if (child.type === 'directory') {
+        // 递归检查子目录
+        return hasSelectedFileInSubtreeForNode(child, props.selectedPath)
+      }
+      return false
+    })
+  }
+
+  return false
+})
+
+// 递归辅助函数
+const hasSelectedFileInSubtreeForNode = (node, selectedPath) => {
+  if (node.type === 'file') {
+    return node.path === selectedPath
+  }
+
+  if (node.type === 'directory' && node.children) {
+    return node.children.some((child) => hasSelectedFileInSubtreeForNode(child, selectedPath))
+  }
+
+  return false
+}
+
+// 监听 selectedPath 变化，自动展开包含选中文件的目录
+watch(
+  () => props.selectedPath,
+  (newSelectedPath) => {
+    if (newSelectedPath && props.node.type === 'directory' && hasSelectedFileInSubtree.value) {
+      isExpanded.value = true
+    }
+  },
+  { immediate: true }
+)
 
 const handleClick = () => {
   if (props.node.type === 'directory') {
