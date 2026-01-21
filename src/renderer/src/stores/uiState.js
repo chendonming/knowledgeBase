@@ -4,6 +4,7 @@ import { applyTheme, getThemeConfig } from '../themes/themeConfig'
 // 全局UI状态
 const outlineCollapsed = ref(false)
 const themeMode = ref('dark')
+const treeExpansionState = ref({}) // 目录树展开状态，key: path, value: expanded
 
 // 检测系统主题偏好
 const getSystemTheme = () => {
@@ -52,6 +53,11 @@ export const initializeUIState = () => {
   if (saved !== null) {
     outlineCollapsed.value = JSON.parse(saved)
   }
+
+  const savedTreeState = localStorage.getItem('tree-expansion-state')
+  if (savedTreeState) {
+    treeExpansionState.value = JSON.parse(savedTreeState)
+  }
 }
 
 // 切换大纲折叠状态
@@ -69,4 +75,21 @@ export const getOutlineCollapsed = () => {
 export const setOutlineCollapsed = (collapsed) => {
   outlineCollapsed.value = collapsed
   localStorage.setItem('outline-collapsed', JSON.stringify(collapsed))
+}
+
+// 获取目录树展开状态
+export const getTreeExpansionState = (path) => {
+  return treeExpansionState.value[path] !== undefined ? treeExpansionState.value[path] : true // 默认展开
+}
+
+// 设置目录树展开状态
+export const setTreeExpansionState = (path, expanded) => {
+  treeExpansionState.value[path] = expanded
+  localStorage.setItem('tree-expansion-state', JSON.stringify(treeExpansionState.value))
+}
+
+// 清除目录树展开状态（当切换文件夹时）
+export const clearTreeExpansionState = () => {
+  treeExpansionState.value = {}
+  localStorage.removeItem('tree-expansion-state')
 }

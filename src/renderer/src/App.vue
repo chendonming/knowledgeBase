@@ -7,7 +7,13 @@ import FolderHistory from './components/FolderHistory.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import Outline from './components/Outline.vue'
 import AlertModal from './components/AlertModal.vue'
-import { initializeUIState, getOutlineCollapsed, initTheme, getThemeMode } from './stores/uiState'
+import {
+  initializeUIState,
+  getOutlineCollapsed,
+  initTheme,
+  getThemeMode,
+  clearTreeExpansionState
+} from './stores/uiState'
 import { alertState, confirmAlert, showAlert } from './stores/alertService'
 
 const fileTree = ref(null)
@@ -47,6 +53,9 @@ const loadFolder = async (folderPath) => {
   try {
     const result = await window.api.getFileTree(folderPath)
     if (result.success) {
+      // 清除之前的树展开状态，因为切换到新文件夹
+      clearTreeExpansionState()
+
       currentFolder.value = folderPath
       fileTree.value = result.tree
 

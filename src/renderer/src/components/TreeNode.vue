@@ -27,6 +27,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { getTreeExpansionState, setTreeExpansionState } from '../stores/uiState'
 
 const props = defineProps({
   node: {
@@ -45,7 +46,13 @@ const props = defineProps({
 
 const emit = defineEmits(['select'])
 
-const isExpanded = ref(props.level === 0)
+const isExpanded = computed({
+  get: () => {
+    const saved = getTreeExpansionState(props.node.path)
+    return saved !== undefined ? saved : props.level === 0 // 根目录默认展开
+  },
+  set: (value) => setTreeExpansionState(props.node.path, value)
+})
 
 // 根据 selectedPath 计算是否选中
 const isSelected = computed(() => {
@@ -94,7 +101,7 @@ watch(
   () => props.selectedPath,
   (newSelectedPath) => {
     if (newSelectedPath && props.node.type === 'directory' && hasSelectedFileInSubtree.value) {
-      isExpanded.value = true
+      setTreeExpansionState(props.node.path, true)
     }
   },
   { immediate: true }
