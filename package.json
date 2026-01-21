@@ -1,6 +1,6 @@
 {
   "name": "knowledgebase",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "知识库文档查看器",
   "main": "./out/main/index.js",
   "author": "example.com",
