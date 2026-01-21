@@ -602,8 +602,12 @@ app.whenReady().then(() => {
   // 搜索功能 IPC 处理器 - 使用 FileSearchManager
   ipcMain.handle(
     'search-files',
-    async (event, { folderPath, query, autoUpdate = true, forceRefresh = false }) => {
+    async (
+      event,
+      { folderPath, query, mode = 'fulltext', autoUpdate = true, forceRefresh = false }
+    ) => {
       return await searchManager.search(folderPath, query, {
+        mode,
         autoUpdate,
         forceRefresh
       })

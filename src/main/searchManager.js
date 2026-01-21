@@ -17,7 +17,7 @@ export class FileSearchManager {
     }
 
     // 索引缓存
-    this.indexCache = new Map() // folderPath -> { idx, fileMap, files, timestamp }
+    this.indexCache = new Map() // folderPath -> { fulltext: {idx, fileMap, files, timestamp}, filename: {idx, fileMap, files, timestamp} }
     this.fileWatchers = new Map() // folderPath -> watcher
     this.fileStats = new Map() // filePath -> { mtime, size }
     this.updateQueue = new Map() // 更新队列
@@ -166,10 +166,13 @@ export class FileSearchManager {
    * @returns {Promise<void>}
    */
   async updateIndexIncremental(folderPath, changes) {
-    const cached = this.indexCache.get(folderPath)
-    if (!cached) return // 缓存不存在，跳过增量更新
+    const folderCache = this.indexCache.get(folderPath)
+    if (!folderCache) return // 缓存不存在，跳过增量更新
 
-    const { idx, fileMap, files } = cached
+    const {
+      fulltext: { idx: idxFulltext, fileMap, files },
+      filename: { idx: idxFilename }
+    } = folderCache
 
     console.log(
       `Incremental update for ${folderPath}: +${changes.added.length} ~${changes.modified.length} -${changes.deleted.length}`
@@ -182,7 +185,8 @@ export class FileSearchManager {
         fileMap.delete(fileId)
         files.splice(fileId, 1)
         // 注意：flexsearch 删除操作
-        idx.remove(fileId)
+        idxFulltext.remove(fileId)
+        idxFilename.remove(fileId)
         this.fileStats.delete(deletedPath)
       }
     }
@@ -221,7 +225,8 @@ export class FileSearchManager {
         })
 
         // 更新索引
-        idx.update(fileId, `${fileName} ${content}`)
+        idxFulltext.update(fileId, `${fileName} ${content}`)
+        idxFilename.update(fileId, fileName)
 
         // 更新文件统计信息
         const stat = await fs.stat(filePath)
@@ -232,7 +237,8 @@ export class FileSearchManager {
     }
 
     // 更新缓存时间戳
-    cached.timestamp = Date.now()
+    folderCache.fulltext.timestamp = Date.now()
+    folderCache.filename.timestamp = Date.now()
 
     // 保存更新后的文件统计信息到磁盘
     await this.saveFileStats(folderPath)
@@ -342,13 +348,18 @@ export class FileSearchManager {
   /**
    * 创建 flexsearch 索引
    * @param {Array} files - 文件列表
+   * @param {string} mode - 索引模式 'filename' 或 'fulltext'
    * @returns {FlexSearch.Index} flexsearch 索引对象
    */
-  createIndex(files) {
+  createIndex(files, mode = 'fulltext') {
     const idx = new FlexSearch.Index(this.flexsearchConfig)
 
     files.forEach((file) => {
-      idx.add(file.id, `${file.name} ${file.content}`)
+      if (mode === 'filename') {
+        idx.add(file.id, file.name)
+      } else {
+        idx.add(file.id, `${file.name} ${file.content}`)
+      }
     })
 
     return idx
@@ -359,9 +370,10 @@ export class FileSearchManager {
    * @param {Array<number>} searchResults - flexsearch 返回的文件 ID 列表
    * @param {Map} fileMap - 文件映射表
    * @param {string} query - 搜索关键词
+   * @param {string} mode - 搜索模式 'filename' 或 'fulltext'
    * @returns {Array} 处理后的结果列表
    */
-  processSearchResults(searchResults, fileMap, query) {
+  processSearchResults(searchResults, fileMap, query, mode = 'fulltext') {
     const results = []
     const processedFiles = new Set()
     const searchQueryLower = query.toLowerCase()
@@ -373,27 +385,37 @@ export class FileSearchManager {
       const fileInfo = fileMap.get(fileId)
       if (!fileInfo) return
 
-      const matches = []
+      let matches = []
+      let matchCount = 0
 
-      fileInfo.lines.forEach((line, index) => {
-        if (line.toLowerCase().includes(searchQueryLower)) {
-          matches.push({
-            lineNumber: index + 1,
-            content: line.trim(),
-            preview: this.getContextPreview(line, query)
-          })
+      if (mode === 'fulltext') {
+        // 全文搜索：查找文件内容中的匹配行
+        fileInfo.lines.forEach((line, index) => {
+          if (line.toLowerCase().includes(searchQueryLower)) {
+            matches.push({
+              lineNumber: index + 1,
+              content: line.trim(),
+              preview: this.getContextPreview(line, query)
+            })
+          }
+        })
+        matchCount = matches.length
+        matches = matches.slice(0, 5)
+      } else {
+        // 文件名搜索：只检查文件名是否匹配，不查找内容
+        if (fileInfo.name.toLowerCase().includes(searchQueryLower)) {
+          matchCount = 1
+          matches = [] // 文件名搜索不显示匹配行
         }
-      })
+      }
 
-      const limitedMatches = matches.slice(0, 5)
-
-      if (matches.length > 0) {
+      if (matchCount > 0) {
         results.push({
           path: fileInfo.path,
           name: fileInfo.name,
           relativePath: fileInfo.relativePath,
-          matches: limitedMatches,
-          matchCount: matches.length
+          matches: matches,
+          matchCount: matchCount
         })
       }
     })
@@ -419,8 +441,9 @@ export class FileSearchManager {
     // 收集所有 markdown 文件
     await this.collectMarkdownFiles(folderPath, folderPath, files, fileMap)
 
-    // 创建索引
-    const idx = this.createIndex(files)
+    // 创建两个模式的索引
+    const idxFulltext = this.createIndex(files, 'fulltext')
+    const idxFilename = this.createIndex(files, 'filename')
 
     // 更新文件统计信息
     for (const file of files) {
@@ -440,13 +463,21 @@ export class FileSearchManager {
 
     // 缓存索引和文件映射（增加时间戳）
     this.indexCache.set(folderPath, {
-      idx,
-      fileMap,
-      files,
-      timestamp: Date.now()
+      fulltext: {
+        idx: idxFulltext,
+        fileMap,
+        files,
+        timestamp: Date.now()
+      },
+      filename: {
+        idx: idxFilename,
+        fileMap,
+        files,
+        timestamp: Date.now()
+      }
     })
 
-    return { idx, fileMap }
+    return { success: true }
   }
 
   /**
@@ -483,10 +514,12 @@ export class FileSearchManager {
   /**
    * 获取指定文件夹的缓存索引
    * @param {string} folderPath - 文件夹路径
+   * @param {string} mode - 搜索模式 'filename' 或 'fulltext'
    * @returns {{idx: Index, fileMap: Map} | null}
    */
-  getCachedIndex(folderPath) {
-    return this.indexCache.get(folderPath) || null
+  getCachedIndex(folderPath, mode = 'fulltext') {
+    const folderCache = this.indexCache.get(folderPath)
+    return folderCache ? folderCache[mode] : null
   }
 
   /**
@@ -499,7 +532,9 @@ export class FileSearchManager {
       folders: []
     }
 
-    for (const [folderPath, { files }] of this.indexCache) {
+    for (const [folderPath, folderCache] of this.indexCache) {
+      // 使用fulltext模式的files，因为两个模式的文件列表是相同的
+      const files = folderCache.fulltext?.files || []
       stats.folders.push({
         path: folderPath,
         fileCount: files.length
@@ -513,7 +548,7 @@ export class FileSearchManager {
    * 执行搜索
    * @param {string} folderPath - 文件夹路径
    * @param {string} query - 搜索关键词
-   * @param {Object} options - 选项 { autoUpdate: boolean, forceRefresh: boolean }
+   * @param {Object} options - 选项 { mode: 'filename'|'fulltext', autoUpdate: boolean, forceRefresh: boolean }
    * @returns {Promise<{success: boolean, results: Array, total: number, error?: string}>}
    */
   async search(folderPath, query, options = {}) {
@@ -522,7 +557,7 @@ export class FileSearchManager {
         return { success: false, results: [] }
       }
 
-      const { autoUpdate = true, forceRefresh = false } = options
+      const { mode = 'fulltext', autoUpdate = true, forceRefresh = false } = options
 
       let idx
       let fileMap
@@ -534,7 +569,7 @@ export class FileSearchManager {
       }
 
       // 从缓存获取索引
-      const cached = this.getCachedIndex(folderPath)
+      const cached = this.getCachedIndex(folderPath, mode)
 
       if (cached) {
         console.log(`Using cached index for: ${folderPath}`)
@@ -557,16 +592,25 @@ export class FileSearchManager {
             console.log(`Detected changes in ${folderPath}, updating index...`)
             await this.updateIndexIncremental(folderPath, changes)
             // 重新获取更新后的索引
-            const updated = this.getCachedIndex(folderPath)
-            idx = updated.idx
-            fileMap = updated.fileMap
+            const updated = this.getCachedIndex(folderPath, mode)
+            if (updated) {
+              idx = updated.idx
+              fileMap = updated.fileMap
+            } else {
+              throw new Error('Failed to get updated index')
+            }
           }
         }
       } else {
         // 缓存不存在，构建新索引
-        const result = await this.buildIndexForFolder(folderPath)
-        idx = result.idx
-        fileMap = result.fileMap
+        await this.buildIndexForFolder(folderPath)
+        const result = this.getCachedIndex(folderPath, mode)
+        if (result) {
+          idx = result.idx
+          fileMap = result.fileMap
+        } else {
+          throw new Error('Failed to build index')
+        }
       }
 
       const searchResults = idx.search({
@@ -575,7 +619,7 @@ export class FileSearchManager {
         suggest: true
       })
 
-      const results = this.processSearchResults(searchResults, fileMap, query)
+      const results = this.processSearchResults(searchResults, fileMap, query, mode)
 
       return { success: true, results, total: results.length }
     } catch (error) {

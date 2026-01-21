@@ -26,6 +26,7 @@ const searchError = ref(null)
 const isRefreshing = ref(false)
 const indexStats = ref(null)
 const showIndexStats = ref(false)
+const searchMode = ref('fulltext') // 'filename' or 'fulltext'
 
 // 执行搜索
 const performSearch = async (forceRefresh = false) => {
@@ -42,8 +43,9 @@ const performSearch = async (forceRefresh = false) => {
     const result = await window.api.searchFiles({
       folderPath: props.currentFolder,
       query: searchQuery.value.trim(),
-      autoUpdate: true,    // ✅ 启用自动检测文件变化
-      forceRefresh: forceRefresh  // 用户手动刷新时强制重建
+      mode: searchMode.value, // 'filename' or 'fulltext'
+      autoUpdate: true, // ✅ 启用自动检测文件变化
+      forceRefresh: forceRefresh // 用户手动刷新时强制重建
     })
 
     if (result.success) {
@@ -98,7 +100,7 @@ const refreshIndex = async () => {
     if (result.success) {
       // 刷新后重新执行搜索
       if (searchQuery.value.trim()) {
-        await performSearch(true)  // 使用 forceRefresh=true
+        await performSearch(true) // 使用 forceRefresh=true
       }
       // 更新索引统计信息
       await loadIndexStats()
@@ -188,6 +190,10 @@ watch(
         </div>
 
         <div class="search-input-container">
+          <select v-model="searchMode" class="search-mode-select">
+            <option value="filename">根据文件标题搜索</option>
+            <option value="fulltext">全文进行关键字搜索</option>
+          </select>
           <input
             ref="searchInputRef"
             v-model="searchQuery"
@@ -212,8 +218,17 @@ watch(
         </div>
 
         <!-- 索引检查状态提示 -->
-        <div v-if="checkingFolders && checkingFolders.has(currentFolder)" class="index-checking-banner">
-          <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div
+          v-if="checkingFolders && checkingFolders.has(currentFolder)"
+          class="index-checking-banner"
+        >
+          <svg
+            class="spinner"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M12 6v6l4 2"></path>
           </svg>
@@ -258,10 +273,17 @@ watch(
                   <polyline points="13 2 13 9 20 9"></polyline>
                 </svg>
                 <span class="result-name">{{ result.name }}</span>
-                <span class="result-count">{{ result.matchCount }} 处匹配</span>
+                <!-- 文件名搜索不显示匹配次数 -->
+                <span v-if="searchMode === 'fulltext'" class="result-count"
+                  >{{ result.matchCount }} 处匹配</span
+                >
               </div>
               <div class="result-path">{{ result.relativePath }}</div>
-              <div v-if="result.matches.length > 0" class="result-matches">
+              <!-- 只有全文搜索才显示匹配的行内容 -->
+              <div
+                v-if="searchMode === 'fulltext' && result.matches.length > 0"
+                class="result-matches"
+              >
                 <div
                   v-for="(match, matchIndex) in result.matches"
                   :key="matchIndex"
@@ -309,7 +331,10 @@ watch(
                 <span class="status-value">{{ indexStats.totalFolders }}</span>
               </div>
 
-              <div v-if="indexStats.folders && indexStats.folders.length > 0" class="status-folders">
+              <div
+                v-if="indexStats.folders && indexStats.folders.length > 0"
+                class="status-folders"
+              >
                 <div v-for="(folder, index) in indexStats.folders" :key="index" class="folder-item">
                   <div class="folder-path">📁 {{ folder.path }}</div>
                   <div class="folder-stats">
@@ -410,10 +435,31 @@ watch(
   position: relative;
   padding: 16px 24px;
   border-bottom: 1px solid var(--border-color);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.search-mode-select {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  font-size: 14px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  min-width: 160px;
+}
+
+.search-mode-select:focus {
+  border-color: var(--accent-color);
 }
 
 .search-input {
-  width: 100%;
+  flex: 1;
   padding: 12px 80px 12px 16px;
   font-size: 16px;
   border: 2px solid var(--border-color);

@@ -22,10 +22,11 @@ const api = {
     ipcRenderer.invoke('create-share-link', { htmlContent, title }),
   stopShareServer: () => ipcRenderer.invoke('stop-share-server'),
   // 搜索功能 API
-  searchFiles: ({ folderPath, query, autoUpdate, forceRefresh }) =>
+  searchFiles: ({ folderPath, query, mode, autoUpdate, forceRefresh }) =>
     ipcRenderer.invoke('search-files', {
       folderPath,
       query,
+      mode,
       autoUpdate,
       forceRefresh
     }),
