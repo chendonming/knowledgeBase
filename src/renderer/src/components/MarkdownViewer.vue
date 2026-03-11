@@ -874,11 +874,18 @@ watch(editorContent, () => {
 watch(
   () => props.filePath,
   async () => {
-    isEditing.value = false
+    // 仅当父组件未请求编辑模式时才切换到预览；右键「编辑」时父组件会传 editing=true，需保留
+    if (!props.editing) {
+      isEditing.value = false
+    }
     saving.value = false
     rawContent.value = ''
     editorContent.value = ''
     await loadFile()
+    // 若父组件请求编辑模式（如右键「编辑」），loadFile 完成后进入编辑器
+    if (props.editing) {
+      enterEditMode()
+    }
   },
   { immediate: true }
 )
