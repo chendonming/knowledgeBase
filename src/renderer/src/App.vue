@@ -464,7 +464,8 @@ onBeforeUnmount(() => {
       :title="alertStore.title"
       :message="alertStore.message"
       :type="alertStore.type"
-      @confirm="confirmAlert"
+      :confirm-mode="alertStore.confirmMode"
+      @confirm="(choice) => confirmAlert(choice)"
     />
   </div>
 </template>

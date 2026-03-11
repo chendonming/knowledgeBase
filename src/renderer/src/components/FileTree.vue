@@ -42,6 +42,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               <span>编辑</span>
             </div>
+            <div class="ctx-item" @click="ctxViewProperties">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span>查看属性</span>
+            </div>
             <div class="ctx-separator"></div>
             <div class="ctx-item ctx-danger" @click="ctxDelete">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -53,7 +57,46 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
               <span>新建文件</span>
             </div>
+            <div class="ctx-item" @click="ctxViewProperties">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span>查看属性</span>
+            </div>
           </template>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Properties modal -->
+    <Teleport to="body">
+      <Transition name="ctx-menu">
+        <div v-if="propertiesModal.visible" class="new-file-overlay" @click.self="closePropertiesModal">
+          <div class="properties-dialog">
+            <div class="dialog-title">文件属性</div>
+            <div class="properties-content">
+              <div class="prop-row">
+                <span class="prop-label">名称</span>
+                <span class="prop-value">{{ propertiesModal.name }}</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">路径</span>
+                <span class="prop-value prop-path">{{ propertiesModal.path }}</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">类型</span>
+                <span class="prop-value">{{ propertiesModal.isFile ? '文件' : '文件夹' }}</span>
+              </div>
+              <div class="prop-row">
+                <span class="prop-label">大小</span>
+                <span class="prop-value">{{ propertiesModal.sizeText }}</span>
+              </div>
+              <div v-if="propertiesModal.truncated" class="prop-note">
+                部分子文件夹（嵌套超过4层）未统计，当前显示为部分大小
+              </div>
+            </div>
+            <div class="dialog-actions">
+              <button class="dialog-btn dialog-confirm" @click="closePropertiesModal">关闭</button>
+            </div>
+          </div>
         </div>
       </Transition>
     </Teleport>
@@ -86,6 +129,7 @@
 <script setup>
 import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import TreeNode from './TreeNode.vue'
+import { showAlert, showConfirm } from '../stores/alertService'
 
 defineProps({
   tree: {
@@ -113,7 +157,24 @@ const newFileDialog = ref({
   fileName: ''
 })
 
+const propertiesModal = ref({
+  visible: false,
+  name: '',
+  path: '',
+  isFile: false,
+  sizeText: '',
+  truncated: false
+})
+
 const newFileInputRef = ref(null)
+
+const formatSize = (bytes) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
+}
 
 const handleSelect = (node) => {
   if (node.type === 'file') {
@@ -172,6 +233,54 @@ const ctxNewFile = () => {
   const node = contextMenu.value.node
   hideContextMenu()
   if (node) startCreateFile(node)
+}
+
+const fetchAndShowProperties = async (path, ignoreDepthLimit = false) => {
+  const result = await window.api.getFileSize({ filePath: path, ignoreDepthLimit })
+  if (!result.success) {
+    await showAlert({
+      title: '获取属性失败',
+      message: result.error || '未知错误',
+      type: 'error'
+    })
+    return false
+  }
+  return result
+}
+
+const ctxViewProperties = async () => {
+  const node = contextMenu.value.node
+  hideContextMenu()
+  if (!node?.path) return
+
+  let result = await fetchAndShowProperties(node.path, false)
+
+  if (!result) return
+
+  if (result.truncated && result.truncatedCount > 0) {
+    const continueTraverse = await showConfirm({
+      title: '嵌套过深',
+      message: `检测到 ${result.truncatedCount} 个子文件夹嵌套超过 4 层。当前大小仅为部分统计。\n\n是否继续遍历全部子文件夹以获取完整大小？`,
+      type: 'warning'
+    })
+    if (continueTraverse) {
+      result = await fetchAndShowProperties(node.path, true)
+      if (!result) return
+    }
+  }
+
+  propertiesModal.value = {
+    visible: true,
+    name: node.name,
+    path: node.path,
+    isFile: result.isFile,
+    sizeText: formatSize(result.size) + (result.truncated ? ' (部分)' : ''),
+    truncated: result.truncated
+  }
+}
+
+const closePropertiesModal = () => {
+  propertiesModal.value = { visible: false, name: '', path: '', isFile: false, sizeText: '', truncated: false }
 }
 
 const startCreateFile = (dirNode) => {
@@ -386,5 +495,54 @@ const confirmCreateFile = () => {
 
 .dialog-confirm:hover {
   background: var(--accent-hover);
+}
+
+/* Properties dialog */
+.properties-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 360px;
+  max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.properties-content {
+  padding: 8px 0;
+}
+
+.prop-row {
+  display: flex;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.prop-label {
+  flex-shrink: 0;
+  width: 56px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.prop-value {
+  flex: 1;
+  color: var(--text-primary);
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.prop-path {
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.prop-note {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 </style>

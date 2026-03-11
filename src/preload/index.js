@@ -13,6 +13,8 @@ const api = {
   createFile: ({ dirPath, fileName }) =>
     ipcRenderer.invoke('create-file', { dirPath, fileName }),
   getFileTree: (dirPath) => ipcRenderer.invoke('get-file-tree', dirPath),
+  getFileSize: ({ filePath, ignoreDepthLimit }) =>
+    ipcRenderer.invoke('get-file-size', { filePath, ignoreDepthLimit }),
   readImage: (imagePath) => ipcRenderer.invoke('read-image', imagePath),
   // 文件夹历史 API
   getFolderHistory: () => ipcRenderer.invoke('get-folder-history'),

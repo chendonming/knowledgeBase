@@ -5,7 +5,8 @@ const state = reactive({
   title: '提示',
   message: '',
   type: 'info',
-  resolve: null
+  resolve: null,
+  confirmMode: false // true 时显示「继续」「取消」双按钮
 })
 
 const queue = []
@@ -18,6 +19,7 @@ const showNext = () => {
   state.message = next.message
   state.type = next.type
   state.resolve = next.resolve
+  state.confirmMode = next.confirmMode || false
   state.visible = true
 }
 
@@ -27,7 +29,8 @@ export const showAlert = (options) => {
     title: payload.title || '提示',
     message: payload.message || '',
     type: payload.type || 'info',
-    resolve: null
+    resolve: null,
+    confirmMode: false
   }
 
   return new Promise((resolve) => {
@@ -37,14 +40,33 @@ export const showAlert = (options) => {
   })
 }
 
-export const confirmAlert = () => {
+/** 显示确认对话框（继续/取消），返回 Promise<boolean>，继续=true，取消=false */
+export const showConfirm = (options) => {
+  const payload = typeof options === 'string' ? { message: options } : options || {}
+  const entry = {
+    title: payload.title || '确认',
+    message: payload.message || '',
+    type: payload.type || 'warning',
+    resolve: null,
+    confirmMode: true
+  }
+
+  return new Promise((resolve) => {
+    entry.resolve = resolve
+    queue.push(entry)
+    showNext()
+  })
+}
+
+/** 关闭弹窗。对于 confirm 模式，传入 true/false 表示用户选择 */
+export const confirmAlert = (userChoice) => {
   if (state.resolve) {
-    state.resolve()
+    state.resolve(state.confirmMode ? userChoice : undefined)
   }
   state.visible = false
   state.resolve = null
+  state.confirmMode = false
 
-  // 显示队列中的下一个
   setTimeout(() => {
     showNext()
   }, 0)

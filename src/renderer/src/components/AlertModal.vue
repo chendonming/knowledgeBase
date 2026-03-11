@@ -7,7 +7,12 @@
             <span class="alert-dot" :class="`alert-dot-${type}`"></span>
             <span>{{ title }}</span>
           </div>
-          <button class="alert-close" type="button" aria-label="关闭" @click="$emit('confirm')">
+          <button
+            class="alert-close"
+            type="button"
+            aria-label="关闭"
+            @click="$emit('confirm', confirmMode ? false : undefined)"
+          >
             ×
           </button>
         </header>
@@ -16,7 +21,27 @@
           <pre v-else class="alert-message multiline">{{ message }}</pre>
         </div>
         <footer class="alert-actions">
-          <button class="alert-button" type="button" @click="$emit('confirm')">知道了</button>
+          <template v-if="confirmMode">
+            <button
+              class="alert-button alert-cancel"
+              type="button"
+              @click="$emit('confirm', false)"
+            >
+              取消
+            </button>
+            <button
+              class="alert-button alert-confirm"
+              type="button"
+              @click="$emit('confirm', true)"
+            >
+              继续
+            </button>
+          </template>
+          <template v-else>
+            <button class="alert-button" type="button" @click="$emit('confirm')">
+              知道了
+            </button>
+          </template>
         </footer>
       </div>
     </div>
@@ -25,6 +50,8 @@
 
 <script setup>
 import { computed } from 'vue'
+
+defineEmits(['confirm'])
 
 const props = defineProps({
   visible: {
@@ -42,6 +69,10 @@ const props = defineProps({
   type: {
     type: String,
     default: 'info'
+  },
+  confirmMode: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -150,6 +181,26 @@ const isSingleLine = computed(() => !props.message.includes('\n'))
   padding: 12px 16px 16px;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
+}
+
+.alert-button.alert-cancel {
+  background: var(--bg-tertiary, var(--bg-primary));
+  color: var(--text-secondary);
+}
+
+.alert-button.alert-cancel:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.alert-button.alert-confirm {
+  background: var(--accent-color);
+  color: #fff;
+}
+
+.alert-button.alert-confirm:hover {
+  background: var(--accent-hover);
 }
 
 .alert-button {

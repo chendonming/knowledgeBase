@@ -509,6 +509,57 @@ tags: []
     }
   })
 
+  // 获取文件/文件夹大小（文件夹会递归遍历，超过4层嵌套时需用户确认）
+  ipcMain.handle('get-file-size', async (event, { filePath, ignoreDepthLimit = false }) => {
+    try {
+      if (!filePath || typeof filePath !== 'string') {
+        return { success: false, error: 'Invalid file path' }
+      }
+      const normalizedPath = path.normalize(filePath)
+      if (!path.isAbsolute(normalizedPath)) {
+        return { success: false, error: 'Path must be absolute' }
+      }
+      const realPath = await fs.realpath(normalizedPath).catch(() => null)
+      if (!realPath) {
+        return { success: false, error: 'File or folder not found' }
+      }
+      const stat = await fs.stat(realPath)
+      if (stat.isFile()) {
+        return { success: true, size: stat.size, isFile: true, truncated: false }
+      }
+      // 目录：递归计算大小
+      const MAX_DEPTH = 4
+      let totalSize = 0
+      let truncated = false
+      let truncatedCount = 0
+      async function calcDirSize(currentPath, depth) {
+        const entries = await fs.readdir(currentPath, { withFileTypes: true })
+        for (const entry of entries) {
+          const fullPath = path.join(currentPath, entry.name)
+          try {
+            if (entry.isFile()) {
+              const s = await fs.stat(fullPath)
+              totalSize += s.size
+            } else if (entry.isDirectory()) {
+              if (depth >= MAX_DEPTH && !ignoreDepthLimit) {
+                truncated = true
+                truncatedCount += 1
+              } else {
+                await calcDirSize(fullPath, depth + 1)
+              }
+            }
+          } catch (err) {
+            console.warn('[get-file-size] Skip:', fullPath, err.message)
+          }
+        }
+      }
+      await calcDirSize(realPath, 0)
+      return { success: true, size: totalSize, isFile: false, truncated, truncatedCount }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle('read-image', async (event, imagePath) => {
     try {
       console.log('imagePath: ', imagePath)
