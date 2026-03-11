@@ -70,6 +70,7 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
+import 'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution.js'
 import 'monaco-editor/min/vs/editor/editor.main.css'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js?worker'
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker.js?worker'
