@@ -30,6 +30,7 @@
       <Transition name="ctx-menu">
         <div
           v-if="contextMenu.visible"
+          ref="contextMenuRef"
           class="context-menu"
           :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
         >
@@ -167,6 +168,40 @@ const propertiesModal = ref({
 })
 
 const newFileInputRef = ref(null)
+const contextMenuRef = ref(null)
+
+/** 校正右键菜单位置，避免超出视窗边界 */
+const clampContextMenuPosition = () => {
+  const menu = contextMenuRef.value
+  if (!menu) return
+
+  const { offsetWidth, offsetHeight } = menu
+  const viewportW = window.innerWidth
+  const viewportH = window.innerHeight
+  const padding = 8
+
+  let { x, y } = contextMenu.value
+
+  // 右侧溢出：向左移动
+  if (x + offsetWidth + padding > viewportW) {
+    x = viewportW - offsetWidth - padding
+  }
+  // 左侧溢出：向右移动
+  if (x < padding) {
+    x = padding
+  }
+
+  // 底部溢出：向上移动
+  if (y + offsetHeight + padding > viewportH) {
+    y = viewportH - offsetHeight - padding
+  }
+  // 顶部溢出：向下移动
+  if (y < padding) {
+    y = padding
+  }
+
+  contextMenu.value = { ...contextMenu.value, x, y }
+}
 
 const formatSize = (bytes) => {
   if (bytes === 0) return '0 B'
@@ -184,6 +219,7 @@ const handleSelect = (node) => {
 
 const showContextMenu = ({ node, x, y }) => {
   contextMenu.value = { visible: true, x, y, node }
+  nextTick(clampContextMenuPosition)
 }
 
 const hideContextMenu = () => {
