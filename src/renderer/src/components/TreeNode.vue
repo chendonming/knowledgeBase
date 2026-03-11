@@ -5,6 +5,7 @@
       :class="{ 'is-file': node.type === 'file', 'is-selected': isSelected }"
       :style="{ paddingLeft: level * 16 + 8 + 'px' }"
       @click="handleClick"
+      @contextmenu.prevent="handleContextMenu"
     >
       <span v-if="node.type === 'directory'" class="icon">
         {{ isExpanded ? '📂' : '📁' }}
@@ -20,13 +21,14 @@
         :level="level + 1"
         :selected-path="selectedPath"
         @select="$emit('select', $event)"
+        @context-menu="$emit('context-menu', $event)"
       />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { getTreeExpansionState, setTreeExpansionState } from '../stores/uiState'
 
 const props = defineProps({
@@ -44,22 +46,20 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['select'])
+const emit = defineEmits(['select', 'context-menu'])
 
 const isExpanded = computed({
   get: () => {
     const saved = getTreeExpansionState(props.node.path)
-    return saved !== undefined ? saved : props.level === 0 // 根目录默认展开
+    return saved !== undefined ? saved : props.level === 0
   },
   set: (value) => setTreeExpansionState(props.node.path, value)
 })
 
-// 根据 selectedPath 计算是否选中
 const isSelected = computed(() => {
   return props.node.type === 'file' && props.node.path === props.selectedPath
 })
 
-// 检查选中的文件是否在当前节点的子树中
 const hasSelectedFileInSubtree = computed(() => {
   if (!props.selectedPath) return false
 
@@ -73,7 +73,6 @@ const hasSelectedFileInSubtree = computed(() => {
         return child.path === props.selectedPath
       }
       if (child.type === 'directory') {
-        // 递归检查子目录
         return hasSelectedFileInSubtreeForNode(child, props.selectedPath)
       }
       return false
@@ -83,7 +82,6 @@ const hasSelectedFileInSubtree = computed(() => {
   return false
 })
 
-// 递归辅助函数
 const hasSelectedFileInSubtreeForNode = (node, selectedPath) => {
   if (node.type === 'file') {
     return node.path === selectedPath
@@ -96,7 +94,6 @@ const hasSelectedFileInSubtreeForNode = (node, selectedPath) => {
   return false
 }
 
-// 监听 selectedPath 变化，自动展开包含选中文件的目录
 watch(
   () => props.selectedPath,
   (newSelectedPath) => {
@@ -113,6 +110,14 @@ const handleClick = () => {
   } else {
     emit('select', props.node)
   }
+}
+
+const handleContextMenu = (event) => {
+  emit('context-menu', {
+    node: props.node,
+    x: event.clientX,
+    y: event.clientY
+  })
 }
 </script>
 

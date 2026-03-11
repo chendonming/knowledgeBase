@@ -358,6 +358,91 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.handle('delete-file', async (event, payload) => {
+    try {
+      const { filePath, rootDir } = payload || {}
+
+      if (!filePath || typeof filePath !== 'string') {
+        return { success: false, error: 'Invalid file path' }
+      }
+
+      const normalizedPath = path.normalize(filePath)
+
+      if (!path.isAbsolute(normalizedPath)) {
+        return { success: false, error: 'Path must be absolute' }
+      }
+
+      if (path.extname(normalizedPath).toLowerCase() !== '.md') {
+        return { success: false, error: 'Only markdown files can be deleted' }
+      }
+
+      const realFilePath = await fs.realpath(normalizedPath)
+
+      if (rootDir && typeof rootDir === 'string') {
+        const normalizedRoot = path.normalize(rootDir)
+        const realRoot = await fs.realpath(normalizedRoot).catch(() => null)
+
+        if (!realRoot) {
+          return { success: false, error: 'Invalid root directory' }
+        }
+
+        const rootWithSep = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep
+        if (!(realFilePath === realRoot || realFilePath.startsWith(rootWithSep))) {
+          return { success: false, error: 'Access denied: file is outside the current folder' }
+        }
+      }
+
+      await fs.unlink(realFilePath)
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('create-file', async (event, payload) => {
+    try {
+      const { dirPath, fileName } = payload || {}
+
+      if (!dirPath || typeof dirPath !== 'string') {
+        return { success: false, error: 'Invalid directory path' }
+      }
+
+      if (!fileName || typeof fileName !== 'string') {
+        return { success: false, error: 'Invalid file name' }
+      }
+
+      const safeName = fileName.endsWith('.md') ? fileName : `${fileName}.md`
+      const normalizedDir = path.normalize(dirPath)
+
+      if (!path.isAbsolute(normalizedDir)) {
+        return { success: false, error: 'Directory path must be absolute' }
+      }
+
+      const fullPath = path.join(normalizedDir, safeName)
+
+      try {
+        await fs.access(fullPath)
+        return { success: false, error: 'File already exists' }
+      } catch {
+        // File doesn't exist — good
+      }
+
+      const template = `---
+title: "${safeName.replace('.md', '')}"
+date: "${new Date().toISOString().split('T')[0]}"
+tags: []
+---
+
+# ${safeName.replace('.md', '')}
+
+`
+      await fs.writeFile(fullPath, template, 'utf-8')
+      return { success: true, filePath: fullPath }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle('get-file-tree', async (event, dirPath) => {
     try {
       const isHiddenEntry = (name) => name.startsWith('.')

@@ -30,6 +30,7 @@ const searchPanelRef = ref(null)
 const indexCheckingFolders = ref(new Set()) // 正在检查索引的文件夹集合
 const alertStore = alertState
 const isEditing = ref(false)
+const markdownViewerRef = ref(null)
 
 // 提供全局状态
 provide('outlineCollapsed', outlineCollapsed)
@@ -78,15 +79,27 @@ const handleSelectFolder = async () => {
   }
 }
 
-const handleSelectFile = (target) => {
+const handleSelectFile = async (target) => {
   const path = typeof target === 'string' ? target : target?.path
 
-  if (path) {
-    selectedFilePath.value = path
-    isEditing.value = false
-  } else {
+  if (!path) {
     console.warn('Invalid file selection', target)
+    return
   }
+
+  if (
+    isEditing.value &&
+    markdownViewerRef.value?.hasUnsavedChanges
+  ) {
+    await showAlert({
+      title: '未保存的修改',
+      message: '当前文件有未保存的修改，切换文件将丢失这些修改。',
+      type: 'warning'
+    })
+  }
+
+  selectedFilePath.value = path
+  isEditing.value = false
 }
 
 // 加载文件夹历史
@@ -243,6 +256,99 @@ const handleToggleEdit = async () => {
   isEditing.value = !isEditing.value
 }
 
+// 处理右键菜单：编辑文件
+const handleEditFile = (node) => {
+  const path = typeof node === 'string' ? node : node?.path
+  if (path) {
+    selectedFilePath.value = path
+    isEditing.value = true
+  }
+}
+
+// 处理右键菜单：删除文件
+const handleDeleteFile = async (node) => {
+  const filePath = typeof node === 'string' ? node : node?.path
+  const fileName = typeof node === 'string' ? node.split('\\').pop() : node?.name
+  if (!filePath) return
+
+  await showAlert({
+    title: '确认删除',
+    message: `确定要删除文件 "${fileName}" 吗？\n此操作不可恢复。`,
+    type: 'warning'
+  })
+
+  try {
+    const result = await window.api.deleteFile({
+      filePath,
+      rootDir: currentFolder.value
+    })
+
+    if (result.success) {
+      if (selectedFilePath.value === filePath) {
+        selectedFilePath.value = null
+        isEditing.value = false
+      }
+      await refreshFileTree()
+      await showAlert({
+        title: '删除成功',
+        message: `文件 "${fileName}" 已删除`,
+        type: 'success'
+      })
+    } else {
+      await showAlert({
+        title: '删除失败',
+        message: result.error || '未知错误',
+        type: 'error'
+      })
+    }
+  } catch (err) {
+    await showAlert({
+      title: '删除失败',
+      message: err.message || '未知错误',
+      type: 'error'
+    })
+  }
+}
+
+// 处理右键菜单：新建文件
+const handleCreateFile = async ({ dirPath, fileName }) => {
+  if (!dirPath || !fileName) return
+
+  try {
+    const result = await window.api.createFile({ dirPath, fileName })
+    if (result.success) {
+      await refreshFileTree()
+      selectedFilePath.value = result.filePath
+      isEditing.value = true
+    } else {
+      await showAlert({
+        title: '创建失败',
+        message: result.error || '未知错误',
+        type: 'error'
+      })
+    }
+  } catch (err) {
+    await showAlert({
+      title: '创建失败',
+      message: err.message || '未知错误',
+      type: 'error'
+    })
+  }
+}
+
+// 刷新文件树
+const refreshFileTree = async () => {
+  if (!currentFolder.value) return
+  try {
+    const result = await window.api.getFileTree(currentFolder.value)
+    if (result.success) {
+      fileTree.value = result.tree
+    }
+  } catch (error) {
+    console.error('Failed to refresh file tree:', error)
+  }
+}
+
 // 刷新搜索索引
 const handleRefreshIndex = () => {
   if (searchPanelRef.value && searchPanelRef.value.refreshIndex) {
@@ -252,17 +358,7 @@ const handleRefreshIndex = () => {
 
 // 处理文件变更并刷新文件树
 const handleFolderFileChanged = async () => {
-  // 重新加载当前文件夹的文件树
-  if (currentFolder.value) {
-    try {
-      const result = await window.api.getFileTree(currentFolder.value)
-      if (result.success) {
-        fileTree.value = result.tree
-      }
-    } catch (error) {
-      console.error('Failed to refresh file tree:', error)
-    }
-  }
+  await refreshFileTree()
 }
 
 // 初始化
@@ -324,14 +420,19 @@ onBeforeUnmount(() => {
           :tree="fileTree"
           :selected-path="selectedFilePath"
           @select-file="handleSelectFile"
+          @edit-file="handleEditFile"
+          @delete-file="handleDeleteFile"
+          @create-file="handleCreateFile"
         />
       </div>
       <div class="main-content">
         <MarkdownViewer
+          ref="markdownViewerRef"
           :file-path="selectedFilePath"
           :editing="isEditing"
           :root-folder="currentFolder"
           @html-updated="markdownHtmlContent = $event"
+          @editing-changed="isEditing = $event"
         />
       </div>
       <div class="outline-panel" :class="{ collapsed: outlineCollapsed }">
