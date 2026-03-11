@@ -2,7 +2,7 @@
   <div class="markdown-viewer">
     <div v-if="loading" class="loading">Loading...</div>
     <div v-else-if="error" class="error">Error: {{ error }}</div>
-    <div v-else>
+    <div v-else class="viewer-content" :class="{ 'edit-mode': isEditing }">
       <div v-if="frontmatter && !isEditing" class="frontmatter-card">
         <h1 v-if="frontmatter.title" class="fm-title">{{ frontmatter.title }}</h1>
         <div class="fm-meta">
@@ -1068,15 +1068,32 @@ defineExpose({
 
 <style scoped>
 .markdown-viewer {
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 24px;
   background: var(--bg-primary);
 }
 
+.markdown-viewer .viewer-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.markdown-viewer .viewer-content.edit-mode {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .editor-wrapper {
-  height: calc(100vh - 200px);
-  min-height: 400px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   max-width: 1100px;
   margin: 0 auto;
 }
