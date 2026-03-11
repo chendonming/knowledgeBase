@@ -1074,6 +1074,7 @@ defineExpose({
   overflow: hidden;
   padding: 24px;
   background: var(--bg-primary);
+  position: relative;
 }
 
 .markdown-viewer .viewer-content {
@@ -1566,12 +1567,13 @@ defineExpose({
   transform: translateY(-10px);
 }
 
-/* 浮动操作栏 */
+/* 浮动操作栏 - 紧靠编辑区域左侧上部分竖排 */
 .floating-action-bar {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
+  position: absolute;
+  left: 8px;
+  top: 24px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 8px;
   z-index: 900;
@@ -1680,6 +1682,6 @@ defineExpose({
 .fab-enter-from,
 .fab-leave-to {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateX(-10px);
 }
 </style>
