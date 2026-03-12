@@ -383,6 +383,23 @@ app.whenReady().then(() => {
     }
   })
 
+  // 拖放时无法获取路径时：渲染进程用 FileReader 读取内容，主进程写入临时文件并返回路径（Electron 32+ 拖放 file.path 已移除）
+  ipcMain.handle('create-temp-file-from-dropped-content', async (event, { content, fileName }) => {
+    try {
+      if (!content || typeof content !== 'string') {
+        return { success: false, error: 'Missing content' }
+      }
+      const tempDir = join(app.getPath('temp'), 'knowledgebase-dropped')
+      if (!existsSync(tempDir)) mkdirSync(tempDir, { recursive: true })
+      const safeName = (fileName || 'dropped.md').replace(/[^a-zA-Z0-9._\u4e00-\u9fa5-]/g, '_') || 'dropped.md'
+      const tempPath = join(tempDir, `dropped_${Date.now()}_${safeName}`)
+      await fs.writeFile(tempPath, content, 'utf-8')
+      return { success: true, filePath: tempPath }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle('save-file', async (event, payload) => {
     try {
       const { filePath, content, rootDir } = payload || {}

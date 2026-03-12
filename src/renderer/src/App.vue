@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, provide } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, provide } from 'vue'
 import MenuBar from './components/MenuBar.vue'
 import FileTree from './components/FileTree.vue'
 import MarkdownViewer from './components/MarkdownViewer.vue'
@@ -84,6 +84,44 @@ const handleSelectFolder = async () => {
   if (folderPath) {
     await loadFolder(folderPath)
   }
+}
+
+// 判断文件是否在指定文件夹下
+const isUnderFolder = (filePath, folderPath) => {
+  if (!folderPath || !filePath) return false
+  const folder = folderPath.replace(/[\\/]$/, '').replace(/\\/g, '/')
+  const file = filePath.replace(/\\/g, '/')
+  return file === folder || file.startsWith(folder + '/')
+}
+
+// 获取文件所在目录（用于外部拖入文件的保存）
+const getParentDir = (filePath) => {
+  if (!filePath) return ''
+  const sep = filePath.includes('\\') ? '\\' : '/'
+  const i = filePath.lastIndexOf(sep)
+  return i > 0 ? filePath.slice(0, i) : ''
+}
+
+// 为 MarkdownViewer 计算 rootFolder：内部文件用 currentFolder，外部拖入文件用其父目录
+const rootFolderForViewer = computed(() => {
+  const fp = selectedFilePath.value
+  const cf = currentFolder.value
+  if (!fp) return cf
+  if (cf && isUnderFolder(fp, cf)) return cf
+  return getParentDir(fp)
+})
+
+// 处理从外部拖入的 Markdown 文件（临时阅读）
+const handleFileDropped = async (filePath) => {
+  if (isEditing.value && markdownViewerRef.value?.hasUnsavedChanges) {
+    await showAlert({
+      title: '未保存的修改',
+      message: '当前文件有未保存的修改，切换文件将丢失这些修改。',
+      type: 'warning'
+    })
+  }
+  selectedFilePath.value = filePath
+  isEditing.value = false
 }
 
 const handleSelectFile = async (target) => {
@@ -509,7 +547,8 @@ onBeforeUnmount(() => {
           ref="markdownViewerRef"
           :file-path="selectedFilePath"
           :editing="isEditing"
-          :root-folder="currentFolder"
+          :root-folder="rootFolderForViewer"
+          @file-dropped="handleFileDropped"
           @html-updated="markdownHtmlContent = $event"
           @editing-changed="isEditing = $event"
           @update:hasUnsavedChanges="viewerHasUnsavedChanges = $event"

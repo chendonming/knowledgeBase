@@ -1,5 +1,11 @@
 <template>
-  <div class="markdown-viewer">
+  <div
+    class="markdown-viewer"
+    :class="{ 'drop-zone-active': isDraggingOver }"
+    @dragover.prevent="handleDragOver"
+    @dragleave="handleDragLeave"
+    @drop.prevent="handleDrop"
+  >
     <div v-if="loading" class="loading">Loading...</div>
     <div v-else-if="error" class="error">Error: {{ error }}</div>
     <div v-else class="viewer-content" :class="{ 'edit-mode': isEditing }">
@@ -26,7 +32,7 @@
               </div>
               <h1 class="welcome-title">欢迎使用 Knowledge Base</h1>
               <p class="welcome-desc">您的本地 Markdown 知识库管理工具</p>
-              <p class="welcome-cta">从左侧文件树选择一个文档，或通过菜单打开文件夹开始阅读</p>
+              <p class="welcome-cta">从左侧文件树选择文档，通过菜单打开文件夹，或将 Markdown 文件拖入此处临时阅读</p>
               <div class="welcome-features">
                 <div class="feature-item">
                   <span class="feature-icon">📝</span>
@@ -162,7 +168,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['html-updated', 'enter-edit', 'exit-edit', 'editing-changed', 'update:hasUnsavedChanges', 'update:saving'])
+const emit = defineEmits(['html-updated', 'enter-edit', 'exit-edit', 'editing-changed', 'update:hasUnsavedChanges', 'update:saving', 'file-dropped'])
 
 const htmlContent = ref('')
 const frontmatter = ref(null)
@@ -172,6 +178,9 @@ const loading = ref(false)
 const error = ref(null)
 const isEditing = ref(false)
 const saving = ref(false)
+// 用于忽略「自身保存」触发的 file-changed（IPC 异步，事件可能晚于 saving=false 到达）
+const lastSavedPath = ref(null)
+const lastSavedTime = ref(0)
 const themeMode = getThemeMode()
 const autoSaveEnabled = ref(localStorage.getItem('auto-save') === 'true')
 let autoSaveTimer = null
@@ -182,6 +191,77 @@ const searchQuery = ref('')
 const searchMatches = ref([])
 const currentMatchIndex = ref(-1)
 const searchInputRef = ref(null)
+
+// 拖放外部文件进行临时阅读
+const isDraggingOver = ref(false)
+const handleDragOver = (e) => {
+  const hasFile = e.dataTransfer?.types?.includes('Files')
+  if (hasFile) {
+    isDraggingOver.value = true
+    e.dataTransfer.dropEffect = 'copy'
+  }
+}
+const handleDragLeave = (e) => {
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    isDraggingOver.value = false
+  }
+}
+const handleDrop = async (e) => {
+  e.preventDefault()
+  e.stopPropagation()
+  isDraggingOver.value = false
+  const files = e.dataTransfer?.files
+  if (!files?.length) return
+  const file = files[0]
+  if (!file) return
+  const fileName = file.name || ''
+  const ext = fileName.toLowerCase()
+  if (!ext.endsWith('.md') && !ext.endsWith('.markdown')) {
+    await showAlert({
+      title: '不支持的文件类型',
+      message: '请拖入 Markdown 文件（.md 或 .markdown）',
+      type: 'warning'
+    })
+    return
+  }
+  loading.value = true
+  try {
+    // 优先尝试获取原文件路径，以便编辑保存时直接写入原文件（Electron webUtils.getPathForFile）
+    const originalPath = window.api.getPathForFile?.(file) || ''
+    if (originalPath && originalPath.length > 0) {
+      emit('file-dropped', originalPath)
+      return
+    }
+    // 无法获取路径时（如部分 macOS 拖放场景）：创建临时文件，编辑保存只写入临时位置
+    const content = await new Promise((resolve, reject) => {
+      const r = new FileReader()
+      r.onload = () => resolve(r.result ?? '')
+      r.onerror = () => reject(new Error('读取文件失败'))
+      r.readAsText(file, 'utf-8')
+    })
+    const res = await window.api.createTempFileFromDroppedContent({
+      content,
+      fileName: fileName || 'dropped.md'
+    })
+    if (res?.success && res.filePath) {
+      emit('file-dropped', res.filePath)
+    } else {
+      await showAlert({
+        title: '打开失败',
+        message: res?.error || '无法创建临时文件',
+        type: 'error'
+      })
+    }
+  } catch (err) {
+    await showAlert({
+      title: '打开失败',
+      message: err?.message || '读取或处理文件失败',
+      type: 'error'
+    })
+  } finally {
+    loading.value = false
+  }
+}
 
 const monacoTheme = computed(() => (themeMode.value === 'light' ? 'vs' : 'vs-dark'))
 
@@ -315,8 +395,22 @@ const handleMenuStopShare = async () => {
   }
 }
 
-// 处理文件变更事件
-const handleFileChanged = async () => {
+// 处理文件变更事件（IPC 传参: { filePath, timestamp }）
+const handleFileChanged = async (_event, data) => {
+  // 若是自身保存触发的变更，直接忽略（IPC 异步，事件可能晚于 saving=false 到达）
+  if (saving.value) return
+  const changedPath = data?.filePath
+  if (
+    changedPath &&
+    changedPath === props.filePath &&
+    lastSavedPath.value === changedPath &&
+    Date.now() - lastSavedTime.value < 800
+  ) {
+    lastSavedPath.value = null
+    return
+  }
+  lastSavedPath.value = null
+
   if (isEditing.value && hasUnsavedChanges.value) {
     await showAlert({
       title: '文件已被修改',
@@ -688,15 +782,13 @@ const saveFile = async (content) => {
     }
 
     rawContent.value = payload.content
-    editorContent.value = payload.content
+    // 不更新 editorContent，避免触发 Monaco setValue 导致语法高亮闪烁；编辑器已是最新内容
+    lastSavedPath.value = props.filePath
+    lastSavedTime.value = Date.now()
     htmlContent.value = await parseMarkdown(payload.content)
     emit('html-updated', htmlContent.value)
 
-    await showAlert({
-      title: '保存成功',
-      message: '文件已保存',
-      type: 'success'
-    })
+    // 保存成功不再弹窗，避免打断编辑流程
   } catch (err) {
     await showAlert({
       title: '保存失败',
@@ -1077,6 +1169,13 @@ defineExpose({
   padding: 24px;
   background: var(--bg-primary);
   position: relative;
+}
+
+/* 拖入外部文件时的高亮效果 */
+.markdown-viewer.drop-zone-active {
+  outline: 2px dashed var(--accent-color);
+  outline-offset: -8px;
+  background: var(--hover-bg, rgba(255, 255, 255, 0.03));
 }
 
 .markdown-viewer .viewer-content {

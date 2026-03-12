@@ -1,8 +1,13 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
+  // 拖放文件时获取文件路径（Electron 32+ 移除了 file.path，需用 webUtils.getPathForFile）
+  getPathForFile: (file) => (file ? webUtils.getPathForFile(file) : ''),
+  // 无法获取路径时：主进程将内容写入临时文件并返回路径
+  createTempFileFromDroppedContent: ({ content, fileName }) =>
+    ipcRenderer.invoke('create-temp-file-from-dropped-content', { content, fileName }),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   readDirectory: (dirPath) => ipcRenderer.invoke('read-directory', dirPath),
   readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
