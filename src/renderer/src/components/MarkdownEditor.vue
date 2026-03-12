@@ -69,6 +69,7 @@
 
 <script setup>
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { getFontFamily } from '../stores/fontSettings'
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
 import 'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution.js'
 import 'monaco-editor/min/vs/editor/editor.main.css'
@@ -433,6 +434,7 @@ onMounted(() => {
     value: props.modelValue ?? '',
     language: props.language,
     theme: props.theme,
+    fontFamily: getFontFamily('editor'),
     minimap: { enabled: false },
     wordWrap: 'on',
     scrollBeyondLastLine: false,
@@ -458,6 +460,12 @@ onMounted(() => {
   if (editorContainer.value) {
     resizeObserver.observe(editorContainer.value)
   }
+
+  const onFontChange = () => {
+    editorInstance?.updateOptions({ fontFamily: getFontFamily('editor') })
+  }
+  window.addEventListener('font-settings-changed', onFontChange)
+  onBeforeUnmount(() => window.removeEventListener('font-settings-changed', onFontChange))
 })
 
 watch(

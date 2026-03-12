@@ -1296,6 +1296,7 @@ defineExpose({
   font-size: 16px;
   line-height: 1.6;
   color: var(--text-primary);
+  font-family: var(--font-preview, Georgia, serif);
 }
 
 /* Hide H1 in content if frontmatter title exists */

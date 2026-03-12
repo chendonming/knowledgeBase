@@ -7,6 +7,8 @@ import FolderHistory from './components/FolderHistory.vue'
 import SearchPanel from './components/SearchPanel.vue'
 import Outline from './components/Outline.vue'
 import AlertModal from './components/AlertModal.vue'
+import SettingsPanel from './components/SettingsPanel.vue'
+import { applyFonts } from './stores/fontSettings'
 import {
   initializeUIState,
   getOutlineCollapsed,
@@ -22,6 +24,7 @@ const currentFolder = ref(null)
 const folderHistory = ref([])
 const showHistory = ref(false)
 const showSearch = ref(false)
+const showSettings = ref(false)
 const sidebarCollapsed = ref(false)
 const markdownHtmlContent = ref('')
 const outlineCollapsed = getOutlineCollapsed()
@@ -38,9 +41,10 @@ const viewerSaving = ref(false)
 provide('outlineCollapsed', outlineCollapsed)
 provide('themeMode', themeMode)
 
-// 初始化主题
+// 初始化主题与字体
 onMounted(async () => {
   initTheme()
+  applyFonts()
 
   // 应用启动时检查索引是否需要更新
   // 这在后台进行，不阻塞用户界面
@@ -402,6 +406,11 @@ const refreshFileTree = async () => {
   }
 }
 
+// 打开设置面板
+const handleOpenSettings = () => {
+  showSettings.value = true
+}
+
 // 刷新搜索索引
 const handleRefreshIndex = () => {
   if (searchPanelRef.value && searchPanelRef.value.refreshIndex) {
@@ -465,6 +474,7 @@ onBeforeUnmount(() => {
       @open-folder="handleSelectFolder"
       @open-history="openHistory"
       @open-search="showSearch = true"
+      @open-settings="handleOpenSettings"
       @refresh-index="handleRefreshIndex"
       @create-share="handleMenuCreateShare"
       @stop-share="handleMenuStopShare"
@@ -531,6 +541,9 @@ onBeforeUnmount(() => {
       :confirm-mode="alertStore.confirmMode"
       @confirm="(choice) => confirmAlert(choice)"
     />
+
+    <!-- Settings Panel -->
+    <SettingsPanel :is-open="showSettings" @close="showSettings = false" />
   </div>
 </template>
 

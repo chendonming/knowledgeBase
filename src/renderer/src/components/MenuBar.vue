@@ -17,6 +17,7 @@ const emit = defineEmits([
   'create-share',
   'stop-share',
   'open-search',
+  'open-settings',
   'refresh-index',
   'toggle-sidebar',
   'toggle-edit',
@@ -116,6 +117,7 @@ const menus = ref([
         action: 'toggle-sidebar'
       },
       { type: 'separator' },
+      { id: 'open-settings', label: '设置...', action: 'open-settings' },
       {
         id: 'theme',
         label: '主题',
@@ -166,6 +168,9 @@ const handleMenuItemClick = async (action) => {
       break
     case 'open-search':
       emit('open-search')
+      break
+    case 'open-settings':
+      emit('open-settings')
       break
     case 'refresh-index':
       emit('refresh-index')
