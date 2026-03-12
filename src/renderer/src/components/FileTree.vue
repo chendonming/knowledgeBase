@@ -62,6 +62,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
               <span>新建文件</span>
             </div>
+            <div class="ctx-item" @click="ctxNewFolder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><path d="M12 11v6"/><path d="M9 14h6"/></svg>
+              <span>新建文件夹</span>
+            </div>
             <div class="ctx-item" @click="ctxViewProperties">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
               <span>查看属性</span>
@@ -132,6 +136,29 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- New folder input dialog -->
+    <Teleport to="body">
+      <Transition name="ctx-menu">
+        <div v-if="newFolderDialog.visible" class="new-file-overlay" @click.self="cancelCreateFolder">
+          <div class="new-file-dialog">
+            <div class="dialog-title">新建文件夹</div>
+            <input
+              ref="newFolderInputRef"
+              v-model="newFolderDialog.folderName"
+              class="dialog-input"
+              placeholder="输入文件夹名称"
+              @keydown.enter="confirmCreateFolder"
+              @keydown.escape="cancelCreateFolder"
+            />
+            <div class="dialog-actions">
+              <button class="dialog-btn dialog-cancel" @click="cancelCreateFolder">取消</button>
+              <button class="dialog-btn dialog-confirm" @click="confirmCreateFolder">创建</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -151,7 +178,7 @@ defineProps({
   }
 })
 
-const emit = defineEmits(['select-file', 'edit-file', 'delete-file', 'create-file'])
+const emit = defineEmits(['select-file', 'edit-file', 'delete-file', 'create-file', 'create-folder'])
 
 const contextMenu = ref({
   visible: false,
@@ -166,6 +193,12 @@ const newFileDialog = ref({
   fileName: ''
 })
 
+const newFolderDialog = ref({
+  visible: false,
+  dirPath: '',
+  folderName: ''
+})
+
 const propertiesModal = ref({
   visible: false,
   name: '',
@@ -176,6 +209,7 @@ const propertiesModal = ref({
 })
 
 const newFileInputRef = ref(null)
+const newFolderInputRef = ref(null)
 const contextMenuRef = ref(null)
 
 /** 校正右键菜单位置，避免超出视窗边界 */
@@ -315,6 +349,12 @@ const ctxNewFile = () => {
   if (node) startCreateFile(node)
 }
 
+const ctxNewFolder = () => {
+  const node = contextMenu.value.node
+  hideContextMenu()
+  if (node) startCreateFolder(node)
+}
+
 const fetchAndShowProperties = async (path, ignoreDepthLimit = false) => {
   const result = await window.api.getFileSize({ filePath: path, ignoreDepthLimit })
   if (!result.success) {
@@ -381,6 +421,26 @@ const confirmCreateFile = () => {
   if (!fileName.trim()) return
   emit('create-file', { dirPath, fileName: fileName.trim() })
   cancelCreateFile()
+}
+
+const startCreateFolder = (dirNode) => {
+  const dirPath = dirNode.type === 'directory' ? dirNode.path : ''
+  if (!dirPath) return
+  newFolderDialog.value = { visible: true, dirPath, folderName: '' }
+  nextTick(() => {
+    newFolderInputRef.value?.focus()
+  })
+}
+
+const cancelCreateFolder = () => {
+  newFolderDialog.value = { visible: false, dirPath: '', folderName: '' }
+}
+
+const confirmCreateFolder = () => {
+  const { dirPath, folderName } = newFolderDialog.value
+  if (!folderName.trim()) return
+  emit('create-folder', { dirPath, folderName: folderName.trim() })
+  cancelCreateFolder()
 }
 </script>
 

@@ -334,6 +334,35 @@ const handleDeleteFile = async (node) => {
   }
 }
 
+// 处理右键菜单：新建文件夹
+const handleCreateFolder = async ({ dirPath, folderName }) => {
+  if (!dirPath || !folderName) return
+
+  try {
+    const result = await window.api.createFolder({ dirPath, folderName })
+    if (result.success) {
+      await refreshFileTree()
+      await showAlert({
+        title: '创建成功',
+        message: `文件夹 "${folderName}" 已创建`,
+        type: 'success'
+      })
+    } else {
+      await showAlert({
+        title: '创建失败',
+        message: result.error || '未知错误',
+        type: 'error'
+      })
+    }
+  } catch (err) {
+    await showAlert({
+      title: '创建失败',
+      message: err.message || '未知错误',
+      type: 'error'
+    })
+  }
+}
+
 // 处理右键菜单：新建文件
 const handleCreateFile = async ({ dirPath, fileName }) => {
   if (!dirPath || !fileName) return
@@ -455,6 +484,7 @@ onBeforeUnmount(() => {
           @edit-file="handleEditFile"
           @delete-file="handleDeleteFile"
           @create-file="handleCreateFile"
+          @create-folder="handleCreateFolder"
         />
       </div>
       <div class="main-content">

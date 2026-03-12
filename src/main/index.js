@@ -443,6 +443,45 @@ tags: []
     }
   })
 
+  ipcMain.handle('create-folder', async (event, payload) => {
+    try {
+      const { dirPath, folderName } = payload || {}
+
+      if (!dirPath || typeof dirPath !== 'string') {
+        return { success: false, error: 'Invalid directory path' }
+      }
+
+      if (!folderName || typeof folderName !== 'string') {
+        return { success: false, error: 'Invalid folder name' }
+      }
+
+      const safeName = folderName.trim()
+      if (!safeName) {
+        return { success: false, error: 'Folder name cannot be empty' }
+      }
+
+      const normalizedDir = path.normalize(dirPath)
+
+      if (!path.isAbsolute(normalizedDir)) {
+        return { success: false, error: 'Directory path must be absolute' }
+      }
+
+      const fullPath = path.join(normalizedDir, safeName)
+
+      try {
+        await fs.access(fullPath)
+        return { success: false, error: 'Folder already exists' }
+      } catch {
+        // Folder doesn't exist — good
+      }
+
+      await fs.mkdir(fullPath, { recursive: false })
+      return { success: true, folderPath: fullPath }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle('get-file-tree', async (event, dirPath) => {
     try {
       const isHiddenEntry = (name) => name.startsWith('.')

@@ -12,6 +12,8 @@ const api = {
     ipcRenderer.invoke('delete-file', { filePath, rootDir }),
   createFile: ({ dirPath, fileName }) =>
     ipcRenderer.invoke('create-file', { dirPath, fileName }),
+  createFolder: ({ dirPath, folderName }) =>
+    ipcRenderer.invoke('create-folder', { dirPath, folderName }),
   getFileTree: (dirPath) => ipcRenderer.invoke('get-file-tree', dirPath),
   getFileSize: ({ filePath, ignoreDepthLimit }) =>
     ipcRenderer.invoke('get-file-size', { filePath, ignoreDepthLimit }),
