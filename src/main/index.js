@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, Menu, Tray, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -34,6 +34,7 @@ const imageMimeTypes = {
 // 文件监视器管理
 let fileWatchers = new Map()
 let mainWindow = null
+let appTray = null
 
 // 停止监视所有文件
 const stopAllWatchers = () => {
@@ -196,6 +197,14 @@ function createWindow() {
     return { action: 'deny' }
   })
 
+  // 点击关闭时最小化到托盘（由托盘逻辑控制）
+  mainWindow.on('close', (e) => {
+    if (appTray && !app.isQuitting) {
+      e.preventDefault()
+      mainWindow.hide()
+    }
+  })
+
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -205,6 +214,63 @@ function createWindow() {
   }
 
   return mainWindow
+}
+
+// 创建系统托盘（Windows/Linux 为任务栏托盘，macOS 为菜单栏图标）
+function createTray() {
+  try {
+    // Windows/Linux 下使用 16x16 图标以获得更好的托盘显示效果
+    const trayIcon = nativeImage.createFromPath(icon)
+    const resizedIcon = trayIcon.resize({ width: 16, height: 16 })
+    const trayImage = resizedIcon.isEmpty() ? trayIcon : resizedIcon
+
+    appTray = new Tray(trayImage)
+    appTray.setToolTip('知识库')
+
+    // 左键点击：显示/隐藏窗口
+    appTray.on('click', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow.isVisible()) {
+          mainWindow.hide()
+        } else {
+          mainWindow.show()
+          mainWindow.focus()
+        }
+      }
+    })
+
+    // 右键菜单（每次右击时根据当前窗口状态更新标签）
+    const updateTrayContextMenu = () => {
+      const contextMenu = Menu.buildFromTemplate([
+        {
+          label: mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible() ? '隐藏' : '显示',
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              if (mainWindow.isVisible()) {
+                mainWindow.hide()
+              } else {
+                mainWindow.show()
+                mainWindow.focus()
+              }
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: '退出',
+          click: () => {
+            app.isQuitting = true
+            app.quit()
+          }
+        }
+      ])
+      appTray.setContextMenu(contextMenu)
+    }
+    appTray.on('right-click', updateTrayContextMenu)
+    updateTrayContextMenu() // 初次设置
+  } catch (err) {
+    console.warn('[tray] Failed to create tray:', err.message)
+  }
 }
 
 // This method will be called when Electron has finished
@@ -790,7 +856,10 @@ tags: []
 
   ipcMain.handle('close-window', async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender)
-    if (window) {
+    if (window && appTray) {
+      // 有托盘时：隐藏窗口到托盘
+      window.hide()
+    } else if (window) {
       window.close()
     }
   })
@@ -872,6 +941,7 @@ tags: []
   })
 
   createWindow()
+  createTray()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
@@ -880,16 +950,14 @@ tags: []
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+// Quit when all windows are closed, except on macOS or when using tray.
 app.on('window-all-closed', () => {
   // 停止分享服务器
   stopShareServer()
   // 停止所有文件监视器
   stopAllWatchers()
 
-  if (process.platform !== 'darwin') {
+  if (process.platform !== 'darwin' && !appTray) {
     app.quit()
   }
 })
