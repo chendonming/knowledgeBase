@@ -13,23 +13,56 @@
           />
         </div>
         <div v-else key="preview" class="preview-wrapper">
-          <div v-if="frontmatter" class="frontmatter-card">
-            <h1 v-if="frontmatter.title" class="fm-title">{{ frontmatter.title }}</h1>
-            <div class="fm-meta">
-              <span v-if="frontmatter.date" class="fm-date">
-                📅 {{ formatDate(frontmatter.date) }}
-              </span>
-              <span v-if="frontmatter.tags && frontmatter.tags.length" class="fm-tags">
-                🏷️ <span v-for="tag in frontmatter.tags" :key="tag" class="tag">{{ tag }}</span>
-              </span>
-              <span v-if="frontmatter.author" class="fm-author"> ✍️ {{ frontmatter.author }} </span>
+          <!-- 欢迎页：无文件时显示 -->
+          <div v-if="!filePath" class="welcome-page">
+            <div class="welcome-content">
+              <div class="welcome-icon">
+                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="16" y="8" width="36" height="48" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+                  <path d="M16 20h36M16 28h28M16 36h24M16 44h20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <rect x="44" y="12" width="24" height="32" rx="2" stroke="currentColor" stroke-width="2" fill="none" opacity="0.7"/>
+                  <path d="M48 20h16M48 26h12M48 32h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+                </svg>
+              </div>
+              <h1 class="welcome-title">欢迎使用 Knowledge Base</h1>
+              <p class="welcome-desc">您的本地 Markdown 知识库管理工具</p>
+              <p class="welcome-cta">从左侧文件树选择一个文档，或通过菜单打开文件夹开始阅读</p>
+              <div class="welcome-features">
+                <div class="feature-item">
+                  <span class="feature-icon">📝</span>
+                  <span>支持 Markdown、数学公式、代码高亮</span>
+                </div>
+                <div class="feature-item">
+                  <span class="feature-icon">⌨️</span>
+                  <span>双击文档可进入编辑模式</span>
+                </div>
+                <div class="feature-item">
+                  <span class="feature-icon">🔍</span>
+                  <span>Ctrl+F 在文档内搜索</span>
+                </div>
+              </div>
             </div>
           </div>
-          <article
-            class="markdown-body"
-            v-html="htmlContent"
-            @dblclick="handleArticleDblClick"
-          ></article>
+          <!-- 文档预览：有文件时显示 -->
+          <template v-else>
+            <div v-if="frontmatter" class="frontmatter-card">
+              <h1 v-if="frontmatter.title" class="fm-title">{{ frontmatter.title }}</h1>
+              <div class="fm-meta">
+                <span v-if="frontmatter.date" class="fm-date">
+                  📅 {{ formatDate(frontmatter.date) }}
+                </span>
+                <span v-if="frontmatter.tags && frontmatter.tags.length" class="fm-tags">
+                  🏷️ <span v-for="tag in frontmatter.tags" :key="tag" class="tag">{{ tag }}</span>
+                </span>
+                <span v-if="frontmatter.author" class="fm-author"> ✍️ {{ frontmatter.author }} </span>
+              </div>
+            </div>
+            <article
+              class="markdown-body"
+              v-html="htmlContent"
+              @dblclick="handleArticleDblClick"
+            ></article>
+          </template>
         </div>
       </Transition>
     </div>
@@ -558,7 +591,7 @@ const parseMarkdown = async (markdown) => {
 
 const loadFile = async () => {
   if (!props.filePath) {
-    htmlContent.value = '<p>Select a file to view</p>'
+    htmlContent.value = ''
     frontmatter.value = null
     rawContent.value = ''
     editorContent.value = ''
@@ -1098,6 +1131,102 @@ defineExpose({
 
 .error {
   color: #f56c6c;
+}
+
+/* 欢迎页样式 */
+.welcome-page {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 48px 24px;
+}
+
+.welcome-content {
+  max-width: 480px;
+  text-align: center;
+  animation: welcome-fade-in 0.5s ease-out;
+}
+
+@keyframes welcome-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  color: var(--accent-color);
+  opacity: 0.9;
+}
+
+.welcome-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.welcome-title {
+  font-size: 1.75em;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.welcome-desc {
+  font-size: 1em;
+  color: var(--text-secondary);
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+.welcome-cta {
+  font-size: 0.95em;
+  color: var(--text-tertiary, var(--text-secondary));
+  margin: 0 0 32px 0;
+  padding: 16px 24px;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  line-height: 1.6;
+}
+
+.welcome-features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.feature-item:hover {
+  border-color: var(--border-color);
+  background: var(--bg-tertiary, var(--hover-bg));
+}
+
+.feature-icon {
+  font-size: 1.2em;
+  flex-shrink: 0;
 }
 
 /* Frontmatter Card Styles */
