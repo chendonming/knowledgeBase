@@ -66,7 +66,6 @@
             <article
               class="markdown-body"
               v-html="htmlContent"
-              @dblclick="handleArticleDblClick"
             ></article>
           </template>
         </div>
@@ -757,11 +756,6 @@ const discardChanges = async () => {
   }
   emit('exit-edit')
   exitEditMode()
-}
-
-const handleArticleDblClick = () => {
-  if (!props.filePath || loading.value || isEditing.value) return
-  requestEnterEdit()
 }
 
 const saveFile = async (content) => {
