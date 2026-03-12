@@ -16,7 +16,7 @@
         :key="`${heading.id}-${heading.level}`"
         :class="`outline-item level-${heading.level}`"
       >
-        <a :href="`#${heading.id}`" @click.prevent="scrollToHeading(heading.id)">
+        <a :href="`#${heading.id}`" @click.prevent="handleHeadingClick(heading.id)">
           {{ heading.text }}
         </a>
       </li>
@@ -25,15 +25,25 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { getOutlineCollapsed, toggleOutlineCollapsed } from '../stores/uiState'
 
 const props = defineProps({
   htmlContent: {
     type: String,
     default: ''
+  },
+  editing: {
+    type: Boolean,
+    default: false
+  },
+  pendingScrollToId: {
+    type: String,
+    default: null
   }
 })
+
+const emit = defineEmits(['exit-edit-and-scroll', 'scroll-done'])
 
 const headings = ref([])
 const isCollapsed = getOutlineCollapsed()
@@ -74,6 +84,15 @@ const extractHeadings = (htmlContent) => {
   headings.value = extractedHeadings
 }
 
+// 处理大纲节点点击：编辑模式下先退出编辑再跳转
+const handleHeadingClick = (headingId) => {
+  if (props.editing) {
+    emit('exit-edit-and-scroll', headingId)
+    return
+  }
+  scrollToHeading(headingId)
+}
+
 // 滚动到指定标题，保持菜单栏可见
 const scrollToHeading = (headingId) => {
   const escapeSelector = (id) => {
@@ -84,29 +103,25 @@ const scrollToHeading = (headingId) => {
     }
   }
 
-  const container = document.querySelector('.markdown-viewer')
-  const selector = `#${escapeSelector(headingId)}`
-  const element = container?.querySelector(selector) || document.querySelector(selector)
+  const doScroll = () => {
+    const markdownViewer = document.querySelector('.markdown-viewer')
+    const selector = `#${escapeSelector(headingId)}`
+    const element = markdownViewer?.querySelector(selector) || document.querySelector(selector)
 
-  if (!element) return
+    if (!element) return
 
-  // 优先在 markdown 容器内滚动，避免整体页面滚动导致菜单栏离开视野
-  if (container) {
-    const containerRect = container.getBoundingClientRect()
-    const targetRect = element.getBoundingClientRect()
-    const offsetTop = targetRect.top - containerRect.top + container.scrollTop
-    const topWithPadding = Math.max(offsetTop - 12, 0) // 留一点顶部间距
-
-    container.scrollTo({ top: topWithPadding, behavior: 'smooth' })
-  } else {
+    // 使用 scrollIntoView，由浏览器自动处理可滚动容器的查找
     element.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' })
+
+    // 高亮显示（需在 MarkdownViewer 内生效，用普通 class）
+    element.classList.add('outline-highlight')
+    setTimeout(() => {
+      element.classList.remove('outline-highlight')
+    }, 2000)
   }
 
-  // 高亮显示
-  element.classList.add('outline-highlight')
-  setTimeout(() => {
-    element.classList.remove('outline-highlight')
-  }, 2000)
+  // 确保 DOM 已渲染后再查找和滚动
+  nextTick(doScroll)
 }
 
 // 切换大纲展开/收起
@@ -124,6 +139,19 @@ watch(
     }, 100)
   },
   { immediate: true }
+)
+
+// 监听待跳转 ID：编辑模式退出后，预览渲染完成后执行滚动
+watch(
+  () => props.pendingScrollToId,
+  (id) => {
+    if (id && !props.editing) {
+      nextTick(() => {
+        setTimeout(() => scrollToHeading(id), 150) // 等待预览 DOM 渲染
+        emit('scroll-done')
+      })
+    }
+  }
 )
 </script>
 

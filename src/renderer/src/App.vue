@@ -34,6 +34,7 @@ const indexCheckingFolders = ref(new Set()) // 正在检查索引的文件夹集
 const alertStore = alertState
 const isEditing = ref(false)
 const markdownViewerRef = ref(null)
+const pendingOutlineScrollId = ref(null)
 const viewerHasUnsavedChanges = ref(false)
 const viewerSaving = ref(false)
 
@@ -274,6 +275,12 @@ const handleExitEdit = () => {
   isEditing.value = false
 }
 
+// 大纲在编辑模式下点击：先退出编辑再跳转
+const handleOutlineExitEditAndScroll = (headingId) => {
+  isEditing.value = false
+  pendingOutlineScrollId.value = headingId
+}
+
 // 导航栏：保存
 const handleSave = () => {
   markdownViewerRef.value?.saveFile?.()
@@ -510,7 +517,13 @@ onBeforeUnmount(() => {
         />
       </div>
       <div class="outline-panel" :class="{ collapsed: outlineCollapsed }">
-        <Outline :html-content="markdownHtmlContent" />
+        <Outline
+          :html-content="markdownHtmlContent"
+          :editing="isEditing"
+          :pending-scroll-to-id="pendingOutlineScrollId"
+          @exit-edit-and-scroll="handleOutlineExitEditAndScroll"
+          @scroll-done="pendingOutlineScrollId = null"
+        />
       </div>
     </div>
 

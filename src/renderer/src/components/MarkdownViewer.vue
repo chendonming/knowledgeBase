@@ -1304,12 +1304,32 @@ defineExpose({
   display: none;
 }
 
+/* 大纲跳转时的高亮效果 */
+.markdown-body :deep(.outline-highlight) {
+  animation: outline-highlight-pulse 2s ease-in-out;
+}
+
+@keyframes outline-highlight-pulse {
+  0% {
+    background-color: var(--selected-bg);
+    box-shadow: 0 0 0 2px var(--accent-color);
+  }
+  50% {
+    background-color: var(--hover-bg);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
 .markdown-body :deep(h1) {
   font-size: 2em;
   margin-bottom: 16px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-primary);
+  scroll-margin-top: 16px;
 }
 
 .markdown-body :deep(h2) {
@@ -1319,6 +1339,7 @@ defineExpose({
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-primary);
+  scroll-margin-top: 16px;
 }
 
 .markdown-body :deep(h3) {
@@ -1326,6 +1347,7 @@ defineExpose({
   margin-top: 24px;
   margin-bottom: 16px;
   color: var(--text-primary);
+  scroll-margin-top: 16px;
 }
 
 .markdown-body :deep(h4),
@@ -1334,6 +1356,7 @@ defineExpose({
   margin-top: 24px;
   margin-bottom: 16px;
   color: var(--text-primary);
+  scroll-margin-top: 16px;
 }
 
 .markdown-body :deep(p) {
