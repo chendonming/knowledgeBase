@@ -317,57 +317,59 @@ onBeforeUnmount(() => {
 
       <!-- 编辑工具栏：编辑按钮 + 保存/预览/放弃 -->
       <div v-if="hasFile" class="edit-toolbar">
-        <template v-if="!isEditing">
-          <button
-            class="nav-edit-btn"
-            title="编辑 (Ctrl+E)"
-            @click="emit('enter-edit')"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-            <span>编辑</span>
-          </button>
-        </template>
-        <template v-else>
-          <button
-            class="nav-action-btn nav-save"
-            title="保存 (Ctrl+S)"
-            :disabled="saving"
-            @click="emit('save')"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-            <span>保存</span>
-          </button>
-          <button
-            class="nav-action-btn nav-preview"
-            title="预览"
-            @click="emit('exit-edit')"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-            <span>预览</span>
-          </button>
-          <button
-            class="nav-action-btn nav-discard"
-            title="放弃修改"
-            @click="emit('discard')"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-            <span>放弃</span>
-          </button>
-          <div v-if="hasUnsavedChanges" class="nav-unsaved-dot" title="有未保存的修改"></div>
-        </template>
+        <Transition name="edit-toolbar" mode="out-in">
+          <div v-if="!isEditing" key="edit" class="edit-toolbar-inner">
+            <button
+              class="nav-edit-btn"
+              title="编辑 (Ctrl+E)"
+              @click="emit('enter-edit')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              <span>编辑</span>
+            </button>
+          </div>
+          <div v-else key="actions" class="edit-toolbar-inner edit-actions">
+            <button
+              class="nav-action-btn nav-save"
+              title="保存 (Ctrl+S)"
+              :disabled="saving"
+              @click="emit('save')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              <span>保存</span>
+            </button>
+            <button
+              class="nav-action-btn nav-preview"
+              title="预览"
+              @click="emit('exit-edit')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <span>预览</span>
+            </button>
+            <button
+              class="nav-action-btn nav-discard"
+              title="放弃修改"
+              @click="emit('discard')"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              <span>放弃</span>
+            </button>
+            <div v-if="hasUnsavedChanges" class="nav-unsaved-dot" title="有未保存的修改"></div>
+          </div>
+        </Transition>
       </div>
     </div>
 
@@ -518,11 +520,55 @@ onBeforeUnmount(() => {
 .edit-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
   margin-left: 16px;
   padding-left: 16px;
   border-left: 1px solid var(--menubar-border);
   position: relative;
+  min-height: 32px;
+}
+
+.edit-toolbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-actions .nav-action-btn,
+.edit-actions .nav-unsaved-dot {
+  animation: edit-btn-enter 0.3s ease-out backwards;
+}
+
+.edit-actions .nav-action-btn:nth-child(1),
+.edit-actions .nav-unsaved-dot { animation-delay: 0.05s; }
+.edit-actions .nav-action-btn:nth-child(2) { animation-delay: 0.1s; }
+.edit-actions .nav-action-btn:nth-child(3) { animation-delay: 0.15s; }
+.edit-actions .nav-action-btn:nth-child(4) { animation-delay: 0.2s; }
+
+@keyframes edit-btn-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 编辑工具栏 切换动画 */
+.edit-toolbar-enter-active,
+.edit-toolbar-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.edit-toolbar-enter-from {
+  opacity: 0;
+  transform: translateX(-8px);
+}
+
+.edit-toolbar-leave-to {
+  opacity: 0;
+  transform: translateX(8px);
 }
 
 /* 编辑按钮 - 突出显示的 CTA 风格，与其他导航按钮完全不同 */

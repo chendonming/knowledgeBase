@@ -3,34 +3,35 @@
     <div v-if="loading" class="loading">Loading...</div>
     <div v-else-if="error" class="error">Error: {{ error }}</div>
     <div v-else class="viewer-content" :class="{ 'edit-mode': isEditing }">
-      <div v-if="frontmatter && !isEditing" class="frontmatter-card">
-        <h1 v-if="frontmatter.title" class="fm-title">{{ frontmatter.title }}</h1>
-        <div class="fm-meta">
-          <span v-if="frontmatter.date" class="fm-date">
-            📅 {{ formatDate(frontmatter.date) }}
-          </span>
-          <span v-if="frontmatter.tags && frontmatter.tags.length" class="fm-tags">
-            🏷️ <span v-for="tag in frontmatter.tags" :key="tag" class="tag">{{ tag }}</span>
-          </span>
-          <span v-if="frontmatter.author" class="fm-author"> ✍️ {{ frontmatter.author }} </span>
+      <Transition name="viewer-mode" mode="out-in">
+        <div v-if="isEditing" key="edit" class="editor-wrapper">
+          <MarkdownEditor
+            v-model="editorContent"
+            :theme="monacoTheme"
+            language="markdown"
+            @save="saveFile"
+          />
         </div>
-      </div>
-
-      <div v-if="isEditing" class="editor-wrapper">
-        <MarkdownEditor
-          v-model="editorContent"
-          :theme="monacoTheme"
-          language="markdown"
-          @save="saveFile"
-        />
-      </div>
-
-      <article
-        v-else
-        class="markdown-body"
-        v-html="htmlContent"
-        @dblclick="handleArticleDblClick"
-      ></article>
+        <div v-else key="preview" class="preview-wrapper">
+          <div v-if="frontmatter" class="frontmatter-card">
+            <h1 v-if="frontmatter.title" class="fm-title">{{ frontmatter.title }}</h1>
+            <div class="fm-meta">
+              <span v-if="frontmatter.date" class="fm-date">
+                📅 {{ formatDate(frontmatter.date) }}
+              </span>
+              <span v-if="frontmatter.tags && frontmatter.tags.length" class="fm-tags">
+                🏷️ <span v-for="tag in frontmatter.tags" :key="tag" class="tag">{{ tag }}</span>
+              </span>
+              <span v-if="frontmatter.author" class="fm-author"> ✍️ {{ frontmatter.author }} </span>
+            </div>
+          </div>
+          <article
+            class="markdown-body"
+            v-html="htmlContent"
+            @dblclick="handleArticleDblClick"
+          ></article>
+        </div>
+      </Transition>
     </div>
 
     <!-- 搜索覆盖层 -->
@@ -1057,7 +1058,8 @@ defineExpose({
   overflow: hidden;
 }
 
-.editor-wrapper {
+.editor-wrapper,
+.preview-wrapper {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -1065,6 +1067,26 @@ defineExpose({
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
+}
+
+.preview-wrapper {
+  overflow-y: auto;
+}
+
+/* 编辑/预览切换动画 */
+.viewer-mode-enter-active,
+.viewer-mode-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.viewer-mode-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.viewer-mode-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
 }
 
 .loading,
