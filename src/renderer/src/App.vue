@@ -31,6 +31,8 @@ const indexCheckingFolders = ref(new Set()) // 正在检查索引的文件夹集
 const alertStore = alertState
 const isEditing = ref(false)
 const markdownViewerRef = ref(null)
+const viewerHasUnsavedChanges = ref(false)
+const viewerSaving = ref(false)
 
 // 提供全局状态
 provide('outlineCollapsed', outlineCollapsed)
@@ -256,6 +258,28 @@ const handleToggleEdit = async () => {
   isEditing.value = !isEditing.value
 }
 
+// 导航栏：进入编辑
+const handleEnterEdit = () => {
+  if (selectedFilePath.value) {
+    isEditing.value = true
+  }
+}
+
+// 导航栏：退出编辑（预览）
+const handleExitEdit = () => {
+  isEditing.value = false
+}
+
+// 导航栏：保存
+const handleSave = () => {
+  markdownViewerRef.value?.saveFile?.()
+}
+
+// 导航栏：放弃修改
+const handleDiscard = async () => {
+  await markdownViewerRef.value?.discardChanges?.()
+}
+
 // 处理右键菜单：编辑文件
 const handleEditFile = (node) => {
   const path = typeof node === 'string' ? node : node?.path
@@ -405,6 +429,10 @@ onBeforeUnmount(() => {
 <template>
   <div class="app-container" :class="{ 'light-theme': themeMode === 'light' }">
     <MenuBar
+      :has-file="!!selectedFilePath"
+      :is-editing="isEditing"
+      :has-unsaved-changes="viewerHasUnsavedChanges"
+      :saving="viewerSaving"
       @open-folder="handleSelectFolder"
       @open-history="openHistory"
       @open-search="showSearch = true"
@@ -413,6 +441,10 @@ onBeforeUnmount(() => {
       @stop-share="handleMenuStopShare"
       @toggle-sidebar="handleToggleSidebar"
       @toggle-edit="handleToggleEdit"
+      @enter-edit="handleEnterEdit"
+      @exit-edit="handleExitEdit"
+      @save="handleSave"
+      @discard="handleDiscard"
     />
     <div class="app-main">
       <div class="sidebar" :class="{ collapsed: sidebarCollapsed }">
@@ -433,6 +465,8 @@ onBeforeUnmount(() => {
           :root-folder="currentFolder"
           @html-updated="markdownHtmlContent = $event"
           @editing-changed="isEditing = $event"
+          @update:hasUnsavedChanges="viewerHasUnsavedChanges = $event"
+          @update:saving="viewerSaving = $event"
         />
       </div>
       <div class="outline-panel" :class="{ collapsed: outlineCollapsed }">

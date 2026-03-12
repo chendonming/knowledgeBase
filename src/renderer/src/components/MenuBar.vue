@@ -4,6 +4,13 @@ import { setThemeMode } from '../stores/uiState'
 import { getThemeList } from '../themes/themeConfig'
 import { showAlert } from '../stores/alertService'
 
+const props = defineProps({
+  hasFile: { type: Boolean, default: false },
+  isEditing: { type: Boolean, default: false },
+  hasUnsavedChanges: { type: Boolean, default: false },
+  saving: { type: Boolean, default: false }
+})
+
 const emit = defineEmits([
   'open-folder',
   'open-history',
@@ -12,7 +19,11 @@ const emit = defineEmits([
   'open-search',
   'refresh-index',
   'toggle-sidebar',
-  'toggle-edit'
+  'toggle-edit',
+  'enter-edit',
+  'exit-edit',
+  'save',
+  'discard'
 ])
 const themeMode = inject('themeMode', ref('dark'))
 
@@ -303,6 +314,61 @@ onBeforeUnmount(() => {
           {{ menu.label }}
         </div>
       </div>
+
+      <!-- 编辑工具栏：编辑按钮 + 保存/预览/放弃 -->
+      <div v-if="hasFile" class="edit-toolbar">
+        <template v-if="!isEditing">
+          <button
+            class="nav-edit-btn"
+            title="编辑 (Ctrl+E)"
+            @click="emit('enter-edit')"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            <span>编辑</span>
+          </button>
+        </template>
+        <template v-else>
+          <button
+            class="nav-action-btn nav-save"
+            title="保存 (Ctrl+S)"
+            :disabled="saving"
+            @click="emit('save')"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            <span>保存</span>
+          </button>
+          <button
+            class="nav-action-btn nav-preview"
+            title="预览"
+            @click="emit('exit-edit')"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span>预览</span>
+          </button>
+          <button
+            class="nav-action-btn nav-discard"
+            title="放弃修改"
+            @click="emit('discard')"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>放弃</span>
+          </button>
+          <div v-if="hasUnsavedChanges" class="nav-unsaved-dot" title="有未保存的修改"></div>
+        </template>
+      </div>
     </div>
 
     <div class="menu-search" role="button" tabindex="0" @click="triggerSearch" @keydown.enter.prevent="triggerSearch" @keydown.space.prevent="triggerSearch">
@@ -446,6 +512,116 @@ onBeforeUnmount(() => {
 .menu-item.active {
   background-color: var(--menubar-hover-bg);
   color: var(--text-primary);
+}
+
+/* 编辑工具栏 - 与菜单项样式完全不同 */
+.edit-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 1px solid var(--menubar-border);
+  position: relative;
+}
+
+/* 编辑按钮 - 突出显示的 CTA 风格，与其他导航按钮完全不同 */
+.nav-edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover, #5a9fd4) 100%);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+.nav-edit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.nav-edit-btn:active {
+  transform: translateY(0);
+}
+
+.nav-edit-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 保存/预览/放弃 - 编辑模式下的操作按钮 */
+.nav-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid var(--menubar-border);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  background: var(--input-bg, rgba(255, 255, 255, 0.04));
+  color: var(--menubar-text);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+.nav-action-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.nav-action-btn:hover {
+  background: var(--menubar-hover-bg);
+  color: var(--text-primary);
+}
+
+.nav-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-save {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: rgba(76, 175, 80, 0.4);
+  color: #81c784;
+}
+
+.nav-save:hover:not(:disabled) {
+  background: rgba(76, 175, 80, 0.35);
+  border-color: #4caf50;
+  color: #a5d6a7;
+}
+
+.nav-preview {
+  /* 与默认样式一致 */
+}
+
+.nav-discard:hover {
+  background: rgba(244, 67, 54, 0.2);
+  border-color: rgba(244, 67, 54, 0.5);
+  color: #ef5350;
+}
+
+.nav-unsaved-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff9800;
+  flex-shrink: 0;
+  animation: nav-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes nav-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .menu-search {

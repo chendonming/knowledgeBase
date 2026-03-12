@@ -33,51 +33,6 @@
       ></article>
     </div>
 
-    <!-- 浮动操作栏 -->
-    <Transition name="fab">
-      <div v-if="props.filePath && !loading" class="floating-action-bar">
-        <template v-if="!isEditing">
-          <button class="fab-btn fab-edit" title="编辑 (Ctrl+E)" @click="requestEnterEdit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
-            <span class="fab-label">编辑</span>
-          </button>
-        </template>
-        <template v-else>
-          <button
-            class="fab-btn fab-save"
-            title="保存 (Ctrl+S)"
-            :disabled="saving"
-            @click="saveFile()"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-            <span class="fab-label">保存</span>
-          </button>
-          <button class="fab-btn fab-preview" title="预览" @click="requestExitEdit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-            <span class="fab-label">预览</span>
-          </button>
-          <button class="fab-btn fab-discard" title="放弃修改" @click="discardChanges">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-            <span class="fab-label">放弃</span>
-          </button>
-          <div v-if="hasUnsavedChanges" class="unsaved-indicator" title="有未保存的修改"></div>
-        </template>
-      </div>
-    </Transition>
-
     <!-- 搜索覆盖层 -->
     <Transition name="search">
       <div v-if="isSearchOpen" class="search-overlay" @click.self="closeSearch">
@@ -156,7 +111,7 @@ import 'katex/dist/katex.min.css'
 import 'highlight.js/styles/atom-one-dark.css'
 import MarkdownEditor from './MarkdownEditor.vue'
 import { getThemeMode } from '../stores/uiState'
-import { showAlert } from '../stores/alertService'
+import { showAlert, showConfirm } from '../stores/alertService'
 
 const props = defineProps({
   filePath: {
@@ -173,7 +128,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['html-updated', 'enter-edit', 'exit-edit', 'editing-changed'])
+const emit = defineEmits(['html-updated', 'enter-edit', 'exit-edit', 'editing-changed', 'update:hasUnsavedChanges', 'update:saving'])
 
 const htmlContent = ref('')
 const frontmatter = ref(null)
@@ -199,6 +154,9 @@ const monacoTheme = computed(() => (themeMode.value === 'light' ? 'vs' : 'vs-dar
 const hasUnsavedChanges = computed(
   () => isEditing.value && editorContent.value !== rawContent.value
 )
+
+watch(hasUnsavedChanges, (v) => emit('update:hasUnsavedChanges', v), { immediate: true })
+watch(saving, (v) => emit('update:saving', v), { immediate: true })
 
 // 分享功能相关状态
 const shareUrl = ref('')
@@ -662,11 +620,12 @@ const requestExitEdit = () => {
 
 const discardChanges = async () => {
   if (hasUnsavedChanges.value) {
-    await showAlert({
+    const confirmed = await showConfirm({
       title: '确认放弃',
       message: '当前有未保存的修改，确定要放弃吗？',
       type: 'warning'
     })
+    if (!confirmed) return
   }
   emit('exit-edit')
   exitEditMode()
@@ -1067,7 +1026,9 @@ defineExpose({
   hasUnsavedChanges,
   isEditing,
   autoSaveEnabled,
+  saving,
   saveFile,
+  discardChanges,
   enterEditMode,
   exitEditMode
 })
@@ -1574,121 +1535,4 @@ defineExpose({
   transform: translateY(-10px);
 }
 
-/* 浮动操作栏 - 紧靠编辑区域左侧上部分竖排 */
-.floating-action-bar {
-  position: absolute;
-  left: 8px;
-  top: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  z-index: 900;
-}
-
-.fab-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.fab-btn svg {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-.fab-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-}
-
-.fab-btn:active {
-  transform: translateY(0);
-}
-
-.fab-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.fab-edit {
-  background: var(--accent-color);
-  color: #fff;
-}
-
-.fab-edit:hover {
-  background: var(--accent-hover);
-}
-
-.fab-save {
-  background: #4caf50;
-  color: #fff;
-}
-
-.fab-save:hover {
-  background: #43a047;
-}
-
-.fab-preview {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-}
-
-.fab-preview:hover {
-  background: var(--hover-bg);
-}
-
-.fab-discard {
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-}
-
-.fab-discard:hover {
-  background: #f56c6c;
-  color: #fff;
-  border-color: #f56c6c;
-}
-
-.unsaved-indicator {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #ff9800;
-  box-shadow: 0 0 6px rgba(255, 152, 0, 0.6);
-  animation: pulse 1.5s ease-in-out infinite;
-  flex-shrink: 0;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.fab-label {
-  display: inline;
-}
-
-.fab-enter-active,
-.fab-leave-active {
-  transition: all 0.2s ease;
-}
-
-.fab-enter-from,
-.fab-leave-to {
-  opacity: 0;
-  transform: translateX(-10px);
-}
 </style>
