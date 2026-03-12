@@ -1018,6 +1018,11 @@ const closeSearch = () => {
   currentMatchIndex.value = -1
 }
 
+// 转义正则特殊字符，使搜索词按字面意义匹配
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 const performSearch = () => {
   clearSearchHighlights()
   searchMatches.value = []
@@ -1028,40 +1033,74 @@ const performSearch = () => {
   }
 
   const query = searchQuery.value.trim()
+
+  // 搜索范围：frontmatter 卡片 + 正文（标题、标签、作者及正文内容均可搜索）
+  const roots = []
+  const frontmatterCard = document.querySelector('.frontmatter-card')
+  if (frontmatterCard) roots.push(frontmatterCard)
   const markdownBody = document.querySelector('.markdown-body')
+  if (markdownBody) roots.push(markdownBody)
+  if (roots.length === 0) return
 
-  if (!markdownBody) return
-
-  // 获取所有文本节点
-  const textNodes = []
+  // 收集文本段及全局偏移，支持跨节点搜索（如代码高亮拆成多个 span 时）
+  const segments = [] // { node, text, globalStart }
+  let globalOffset = 0
   const walk = (node) => {
-    if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
-      textNodes.push(node)
-    } else if (
-      node.nodeType === Node.ELEMENT_NODE &&
-      !['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(node.tagName)
-    ) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent
+      if (text.length > 0) {
+        segments.push({ node, text, globalStart: globalOffset })
+        globalOffset += text.length
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      if (['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(node.tagName)) return
+      if (node.classList?.contains('code-copy-btn')) return
       node.childNodes.forEach(walk)
     }
   }
-  walk(markdownBody)
+  roots.forEach((root) => walk(root))
 
-  // 在文本节点中搜索匹配
-  textNodes.forEach((textNode) => {
-    const text = textNode.textContent
-    const regex = new RegExp(query, 'gi')
-    let match
-    while ((match = regex.exec(text)) !== null) {
-      searchMatches.value.push({
-        node: textNode,
-        start: match.index,
-        end: match.index + match[0].length,
-        text: match[0]
+  const fullText = segments.map((s) => s.text).join('')
+  const regex = new RegExp(escapeRegExp(query), 'gi')
+  let match
+  const rawMatches = []
+  while ((match = regex.exec(fullText)) !== null) {
+    const matchStart = match.index
+    const matchEnd = match.index + match[0].length
+    const matchText = match[0]
+
+    let startNode = null
+    let startOffset = 0
+    let endNode = null
+    let endOffset = 0
+    let offset = 0
+    for (const seg of segments) {
+      const segEnd = offset + seg.text.length
+      if (startNode === null && matchStart < segEnd) {
+        startNode = seg.node
+        startOffset = matchStart - offset
+      }
+      if (endNode === null && matchEnd <= segEnd) {
+        endNode = seg.node
+        endOffset = matchEnd - offset
+        break
+      }
+      offset = segEnd
+    }
+    if (startNode && endNode) {
+      rawMatches.push({
+        startNode,
+        startOffset,
+        endNode,
+        endOffset,
+        text: matchText,
+        globalEnd: matchEnd
       })
     }
-  })
+  }
+  searchMatches.value = rawMatches
 
-  // 高亮匹配
+  // 高亮匹配（从后向前插入，避免 DOM 修改影响未处理的位置）
   highlightMatches()
 
   // 如果有匹配，跳转到第一个
@@ -1072,14 +1111,17 @@ const performSearch = () => {
 }
 
 const highlightMatches = () => {
-  searchMatches.value.forEach((match, index) => {
+  // 按 globalEnd 从大到小排序，从后向前插入，避免 DOM 修改使后续 match 的节点引用失效
+  const sorted = [...searchMatches.value].sort((a, b) => (b.globalEnd ?? 0) - (a.globalEnd ?? 0))
+  sorted.forEach((match, sortedIndex) => {
+    const originalIndex = searchMatches.value.indexOf(match)
     const range = document.createRange()
-    range.setStart(match.node, match.start)
-    range.setEnd(match.node, match.end)
+    range.setStart(match.startNode, match.startOffset)
+    range.setEnd(match.endNode, match.endOffset)
 
     const highlight = document.createElement('mark')
     highlight.className = 'search-highlight'
-    if (index === currentMatchIndex.value) {
+    if (originalIndex === currentMatchIndex.value) {
       highlight.className += ' current-match'
     }
     highlight.textContent = match.text
