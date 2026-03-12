@@ -57,8 +57,66 @@
           <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M3 3v18h18V3H3zm8 16H5v-6h6v6zm0-8H5V5h6v6zm8 8h-6v-6h6v6zm0-8h-6V5h6v6z"/></svg>
         </button>
       </div>
+      <div class="toolbar-group">
+        <button class="toolbar-btn" title="查找 (Ctrl+F)" @click="openFind">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="M21 21l-4.35-4.35"></path>
+          </svg>
+        </button>
+      </div>
     </div>
     <div ref="editorContainer" class="editor-container"></div>
+    <!-- 编辑器内查找覆盖层（VSCode 风格） -->
+    <Transition name="editor-find">
+      <div v-if="isFindOpen" class="editor-find-overlay" @click.self="closeFind">
+        <div class="editor-find-container">
+          <div class="editor-find-input-group">
+            <input
+              ref="findInputRef"
+              v-model="findQuery"
+              type="text"
+              class="editor-find-input"
+              placeholder="查找..."
+              @keydown.enter="nextFindMatch"
+              @keydown.escape="closeFind"
+              @keydown.arrow-up.prevent="prevFindMatch"
+              @keydown.arrow-down.prevent="nextFindMatch"
+              @input="performFind"
+            />
+            <span v-if="findMatches.length > 0" class="editor-find-stats">
+              {{ currentFindIndex + 1 }} / {{ findMatches.length }}
+            </span>
+            <button
+              class="editor-find-btn"
+              @click="prevFindMatch"
+              :disabled="findMatches.length === 0"
+              title="上一个 (↑)"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+            </button>
+            <button
+              class="editor-find-btn"
+              @click="nextFindMatch"
+              :disabled="findMatches.length === 0"
+              title="下一个 (↓)"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <button class="editor-find-btn close" @click="closeFind" title="关闭 (Esc)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
     <div class="editor-statusbar">
       <span class="status-item">Ln {{ cursorLine }}, Col {{ cursorColumn }}</span>
       <span class="status-item">{{ wordCount }} 字</span>
@@ -68,7 +126,7 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getFontFamily } from '../stores/fontSettings'
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
 import 'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution.js'
@@ -108,6 +166,13 @@ const cursorLine = ref(1)
 const cursorColumn = ref(1)
 const wordCount = ref(0)
 const lineCount = ref(0)
+
+// 编辑器内查找（VSCode 风格）
+const isFindOpen = ref(false)
+const findQuery = ref('')
+const findMatches = ref([])
+const currentFindIndex = ref(-1)
+const findInputRef = ref(null)
 
 if (!self.MonacoEnvironment) {
   self.MonacoEnvironment = {
@@ -305,6 +370,7 @@ const formatTable = () => {
   insertBlock(table)
 }
 
+// --- 编辑器内查找（VSCode 风格） ---
 const bindModel = () => {
   if (!editorInstance) return
 
@@ -342,6 +408,72 @@ const bindModel = () => {
     monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyK,
     formatCodeBlock
   )
+
+  // Ctrl+F 打开自定义查找
+  editorInstance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, openFind)
+}
+
+const openFind = () => {
+  if (editorInstance) {
+    const selection = editorInstance.getSelection()
+    const selectedText = editorInstance.getModel()?.getValueInRange(selection)
+    findQuery.value = selectedText?.trim() || ''
+    isFindOpen.value = true
+    performFind()
+    nextTick(() => findInputRef.value?.focus())
+  }
+}
+
+const closeFind = () => {
+  isFindOpen.value = false
+  findMatches.value = []
+  currentFindIndex.value = -1
+  editorInstance?.focus()
+}
+
+const performFind = () => {
+  if (!editorInstance || !findQuery.value) {
+    findMatches.value = []
+    currentFindIndex.value = -1
+    return
+  }
+  const model = editorInstance.getModel()
+  if (!model) return
+  const matches = model.findMatches(
+    findQuery.value,
+    false, // 搜索整个文档，不限制可编辑区域
+    false, // 非正则
+    false, // 非大小写
+    null,
+    false // 不捕获分组
+  )
+  findMatches.value = matches.map((m) => m.range)
+  if (findMatches.value.length > 0) {
+    currentFindIndex.value = 0
+    gotoFindMatch(0)
+  } else {
+    currentFindIndex.value = -1
+  }
+}
+
+const gotoFindMatch = (index) => {
+  const match = findMatches.value[index]
+  if (!match) return
+  editorInstance.setSelection(match)
+  editorInstance.revealRangeInCenter(match)
+}
+
+const nextFindMatch = () => {
+  if (findMatches.value.length === 0) return
+  currentFindIndex.value = (currentFindIndex.value + 1) % findMatches.value.length
+  gotoFindMatch(currentFindIndex.value)
+}
+
+const prevFindMatch = () => {
+  if (findMatches.value.length === 0) return
+  currentFindIndex.value =
+    (currentFindIndex.value - 1 + findMatches.value.length) % findMatches.value.length
+  gotoFindMatch(currentFindIndex.value)
 }
 
 let completionDisposable = null
@@ -466,6 +598,20 @@ onMounted(() => {
   }
   window.addEventListener('font-settings-changed', onFontChange)
   onBeforeUnmount(() => window.removeEventListener('font-settings-changed', onFontChange))
+
+  // 使用 capture 在冒泡前拦截 Ctrl+F（Monaco addCommand 可能不触发）
+  // 编辑模式下始终响应，确保 Ctrl+F 可靠触发
+  const handleKeyDown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+      if (editorInstance) {
+        e.preventDefault()
+        e.stopPropagation()
+        openFind()
+      }
+    }
+  }
+  window.addEventListener('keydown', handleKeyDown, true)
+  onBeforeUnmount(() => window.removeEventListener('keydown', handleKeyDown, true))
 })
 
 watch(
@@ -607,5 +753,79 @@ onBeforeUnmount(() => {
 .status-item {
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+/* 编辑器内查找覆盖层 */
+.editor-find-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+.editor-find-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.editor-find-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.editor-find-input {
+  width: 240px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.editor-find-input:focus {
+  outline: none;
+  border-color: var(--accent-color, #0078d4);
+}
+.editor-find-stats {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 48px;
+}
+.editor-find-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+}
+.editor-find-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+.editor-find-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.editor-find-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.editor-find-enter-active,
+.editor-find-leave-active {
+  transition: opacity 0.15s ease;
+}
+.editor-find-enter-from,
+.editor-find-leave-to {
+  opacity: 0;
 }
 </style>

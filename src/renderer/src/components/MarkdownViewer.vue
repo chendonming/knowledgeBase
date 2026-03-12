@@ -425,13 +425,14 @@ const handleFileChanged = async (_event, data) => {
 }
 
 // 处理键盘事件
+// 编辑模式下由 Monaco 处理 Ctrl+F（文档内查找），仅预览模式下使用本项目的搜索
 const handleKeyDown = (event) => {
-  // Ctrl+F 或 Cmd+F 打开搜索
   if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
-    event.preventDefault()
     if (!isEditing.value) {
+      event.preventDefault()
       openSearch()
     }
+    // 编辑模式下不拦截，由 MarkdownEditor 的 Monaco 查找功能处理
   }
 }
 
