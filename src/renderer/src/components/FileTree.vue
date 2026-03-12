@@ -47,6 +47,10 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
               <span>查看属性</span>
             </div>
+            <div class="ctx-item" @click="ctxOpenInExplorer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>在资源管理器打开</span>
+            </div>
             <div class="ctx-separator"></div>
             <div class="ctx-item ctx-danger" @click="ctxDelete">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -61,6 +65,10 @@
             <div class="ctx-item" @click="ctxViewProperties">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
               <span>查看属性</span>
+            </div>
+            <div class="ctx-item" @click="ctxOpenInExplorer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>在资源管理器打开</span>
             </div>
           </template>
         </div>
@@ -263,6 +271,42 @@ const ctxDelete = () => {
   const node = contextMenu.value.node
   hideContextMenu()
   if (node) emit('delete-file', node)
+}
+
+const ctxOpenInExplorer = async () => {
+  const node = contextMenu.value.node
+  hideContextMenu()
+  if (!node?.path) return
+  const openInExplorer =
+    window.api?.openInExplorer ??
+    ((payload) => window.electron?.ipcRenderer?.invoke?.('open-in-explorer', payload))
+  if (typeof openInExplorer !== 'function') {
+    await showAlert({
+      title: '功能不可用',
+      message: '请重启应用后重试。',
+      type: 'error'
+    })
+    return
+  }
+  try {
+    const result = await openInExplorer({
+      filePath: node.path,
+      isFile: node.type === 'file'
+    })
+    if (!result.success) {
+      await showAlert({
+        title: '打开失败',
+        message: result.error || '未知错误',
+        type: 'error'
+      })
+    }
+  } catch (e) {
+    await showAlert({
+      title: '打开失败',
+      message: e?.message || '未知错误',
+      type: 'error'
+    })
+  }
 }
 
 const ctxNewFile = () => {

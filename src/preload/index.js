@@ -16,6 +16,8 @@ const api = {
   getFileSize: ({ filePath, ignoreDepthLimit }) =>
     ipcRenderer.invoke('get-file-size', { filePath, ignoreDepthLimit }),
   readImage: (imagePath) => ipcRenderer.invoke('read-image', imagePath),
+  openInExplorer: ({ filePath, isFile }) =>
+    ipcRenderer.invoke('open-in-explorer', { filePath, isFile }),
   // 文件夹历史 API
   getFolderHistory: () => ipcRenderer.invoke('get-folder-history'),
   addFolderToHistory: (folderPath) => ipcRenderer.invoke('add-folder-to-history', folderPath),

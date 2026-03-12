@@ -577,6 +577,27 @@ tags: []
     }
   })
 
+  // 在资源管理器中打开文件或文件夹
+  ipcMain.handle('open-in-explorer', async (event, { filePath, isFile }) => {
+    try {
+      if (!filePath || typeof filePath !== 'string') {
+        return { success: false, error: 'Invalid path' }
+      }
+      const normalizedPath = path.normalize(filePath)
+      if (!existsSync(normalizedPath)) {
+        return { success: false, error: 'Path does not exist' }
+      }
+      if (isFile) {
+        shell.showItemInFolder(normalizedPath)
+      } else {
+        await shell.openPath(normalizedPath)
+      }
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
   // 文件夹历史管理 IPC 处理器
   const historyFile = path.join(getUserDataPath(), 'folderHistory.json')
 
