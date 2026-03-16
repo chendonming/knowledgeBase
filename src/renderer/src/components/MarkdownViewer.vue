@@ -18,7 +18,12 @@
             @save="saveFile"
           />
         </div>
-        <div v-else key="preview" class="preview-wrapper">
+        <div
+          v-else
+          key="preview"
+          class="preview-wrapper"
+          @click="onPreviewClick"
+        >
           <!-- 欢迎页：无文件时显示 -->
           <div v-if="!filePath" class="welcome-page">
             <div class="welcome-content">
@@ -71,6 +76,38 @@
         </div>
       </Transition>
     </div>
+
+    <!-- 图片灯箱：放大/缩小/平移 -->
+    <Transition name="lightbox">
+      <div
+        v-if="imageLightboxOpen"
+        class="image-lightbox"
+        @click.self="closeImageLightbox"
+        @wheel.prevent="onLightboxWheel"
+      >
+        <div class="lightbox-toolbar">
+          <button class="lightbox-btn" @click="lightboxZoomOut" title="缩小">−</button>
+          <span class="lightbox-zoom-label">{{ Math.round(lightboxZoom * 100) }}%</span>
+          <button class="lightbox-btn" @click="lightboxZoomIn" title="放大">+</button>
+          <button class="lightbox-btn" @click="lightboxResetZoom" title="重置">100%</button>
+          <button class="lightbox-btn close-btn" @click="closeImageLightbox" title="关闭">×</button>
+        </div>
+        <div
+          class="lightbox-content"
+          :class="{ 'is-dragging': lightboxDrag.active }"
+          :style="lightboxContentStyle"
+          @mousedown="onLightboxMouseDown"
+        >
+          <img
+            ref="lightboxImageRef"
+            class="lightbox-image"
+            :src="lightboxImageSrc"
+            :style="lightboxImageStyle"
+            draggable="false"
+          />
+        </div>
+      </div>
+    </Transition>
 
     <!-- 搜索覆盖层 -->
     <Transition name="search">
@@ -191,6 +228,17 @@ const searchMatches = ref([])
 const currentMatchIndex = ref(-1)
 const searchInputRef = ref(null)
 
+// 图片灯箱：放大/缩小/平移
+const imageLightboxOpen = ref(false)
+const lightboxImageSrc = ref('')
+const lightboxZoom = ref(1)
+const lightboxOffset = ref({ x: 0, y: 0 })
+const lightboxImageRef = ref(null)
+const lightboxDrag = ref({ active: false, startX: 0, startY: 0, startOffsetX: 0, startOffsetY: 0 })
+const LIGHTBOX_ZOOM_MIN = 0.25
+const LIGHTBOX_ZOOM_MAX = 5
+const LIGHTBOX_ZOOM_STEP = 0.25
+
 // 拖放外部文件进行临时阅读
 const isDraggingOver = ref(false)
 const handleDragOver = (e) => {
@@ -263,6 +311,14 @@ const handleDrop = async (e) => {
 }
 
 const monacoTheme = computed(() => (themeMode.value === 'light' ? 'vs' : 'vs-dark'))
+
+// 图片灯箱样式
+const lightboxContentStyle = computed(() => ({
+  cursor: lightboxDrag.value.active ? 'grabbing' : 'grab'
+}))
+const lightboxImageStyle = computed(() => ({
+  transform: `translate(${lightboxOffset.value.x}px, ${lightboxOffset.value.y}px) scale(${lightboxZoom.value})`
+}))
 
 const hasUnsavedChanges = computed(
   () => isEditing.value && editorContent.value !== rawContent.value
@@ -424,6 +480,71 @@ const handleFileChanged = async (_event, data) => {
   }
 }
 
+// 图片灯箱：点击预览区域内的图片打开灯箱
+const onPreviewClick = (e) => {
+  const img = e.target.closest?.('.markdown-body img')
+  if (!img || !img.src) return
+  lightboxImageSrc.value = img.src
+  lightboxZoom.value = 1
+  lightboxOffset.value = { x: 0, y: 0 }
+  imageLightboxOpen.value = true
+}
+
+const closeImageLightbox = () => {
+  imageLightboxOpen.value = false
+  lightboxDrag.value = { ...lightboxDrag.value, active: false }
+  window.removeEventListener('mousemove', onLightboxMouseMove)
+  window.removeEventListener('mouseup', onLightboxMouseUp)
+}
+
+const lightboxZoomIn = () => {
+  lightboxZoom.value = Math.min(LIGHTBOX_ZOOM_MAX, lightboxZoom.value + LIGHTBOX_ZOOM_STEP)
+}
+
+const lightboxZoomOut = () => {
+  lightboxZoom.value = Math.max(LIGHTBOX_ZOOM_MIN, lightboxZoom.value - LIGHTBOX_ZOOM_STEP)
+}
+
+const lightboxResetZoom = () => {
+  lightboxZoom.value = 1
+  lightboxOffset.value = { x: 0, y: 0 }
+}
+
+const onLightboxWheel = (e) => {
+  if (!imageLightboxOpen.value) return
+  const delta = e.deltaY > 0 ? -LIGHTBOX_ZOOM_STEP : LIGHTBOX_ZOOM_STEP
+  lightboxZoom.value = Math.max(
+    LIGHTBOX_ZOOM_MIN,
+    Math.min(LIGHTBOX_ZOOM_MAX, lightboxZoom.value + delta)
+  )
+}
+
+const onLightboxMouseDown = (e) => {
+  lightboxDrag.value = {
+    active: true,
+    startX: e.clientX,
+    startY: e.clientY,
+    startOffsetX: lightboxOffset.value.x,
+    startOffsetY: lightboxOffset.value.y
+  }
+  window.addEventListener('mousemove', onLightboxMouseMove)
+  window.addEventListener('mouseup', onLightboxMouseUp)
+}
+
+const onLightboxMouseMove = (e) => {
+  if (!lightboxDrag.value.active) return
+  lightboxOffset.value = {
+    x: lightboxDrag.value.startOffsetX + (e.clientX - lightboxDrag.value.startX),
+    y: lightboxDrag.value.startOffsetY + (e.clientY - lightboxDrag.value.startY)
+  }
+}
+
+const onLightboxMouseUp = () => {
+  lightboxDrag.value = { ...lightboxDrag.value, active: false }
+  window.removeEventListener('mousemove', onLightboxMouseMove)
+  window.removeEventListener('mouseup', onLightboxMouseUp)
+}
+
 // 处理键盘事件
 // 编辑模式下由 Monaco 处理 Ctrl+F（文档内查找），仅预览模式下使用本项目的搜索
 const handleKeyDown = (event) => {
@@ -433,6 +554,10 @@ const handleKeyDown = (event) => {
       openSearch()
     }
     // 编辑模式下不拦截，由 MarkdownEditor 的 Monaco 查找功能处理
+  }
+  // 灯箱打开时 Esc 关闭
+  if (event.key === 'Escape' && imageLightboxOpen.value) {
+    closeImageLightbox()
   }
 }
 
@@ -1655,6 +1780,14 @@ defineExpose({
 .markdown-body :deep(img) {
   max-width: 100%;
   height: auto;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: opacity 0.2s, box-shadow 0.2s;
+}
+
+.markdown-body :deep(img:hover) {
+  opacity: 0.92;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* 正在加载的本地图片样式 */
@@ -1844,6 +1977,105 @@ defineExpose({
 .search-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+/* 图片灯箱 */
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px 24px;
+}
+
+.lightbox-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.lightbox-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.lightbox-btn:hover {
+  background: var(--hover-bg);
+  color: var(--accent-color);
+}
+
+.lightbox-btn.close-btn {
+  font-size: 24px;
+  line-height: 1;
+  margin-left: 8px;
+  border-left: 1px solid var(--border-color);
+}
+
+.lightbox-zoom-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  min-width: 48px;
+  text-align: center;
+}
+
+.lightbox-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+}
+
+.lightbox-content:active,
+.lightbox-content.is-dragging {
+  cursor: grabbing;
+}
+
+.lightbox-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+  transition: transform 0.1s ease-out;
+}
+
+.lightbox-image.dragging {
+  cursor: grabbing;
+}
+
+.lightbox-enter-active,
+.lightbox-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.lightbox-enter-from,
+.lightbox-leave-to {
+  opacity: 0;
 }
 
 </style>
