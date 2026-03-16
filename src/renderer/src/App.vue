@@ -17,7 +17,7 @@ import {
   getThemeMode,
   clearTreeExpansionState
 } from './stores/uiState'
-import { alertState, confirmAlert, showAlert } from './stores/alertService'
+import { alertState, confirmAlert, showAlert, showConfirm } from './stores/alertService'
 
 const fileTree = ref(null)
 const selectedFilePath = ref(null)
@@ -360,11 +360,12 @@ const handleDeleteFile = async (node) => {
   const fileName = typeof node === 'string' ? node.split('\\').pop() : node?.name
   if (!filePath) return
 
-  await showAlert({
+  const confirmed = await showConfirm({
     title: '确认删除',
     message: `确定要删除文件 "${fileName}" 吗？\n此操作不可恢复。`,
     type: 'warning'
   })
+  if (!confirmed) return
 
   try {
     const result = await window.api.deleteFile({
