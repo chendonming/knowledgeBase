@@ -414,8 +414,9 @@ app.whenReady().then(() => {
         return { success: false, error: 'Path must be absolute' }
       }
 
-      if (path.extname(normalizedPath).toLowerCase() !== '.md') {
-        return { success: false, error: 'Only markdown files can be saved' }
+      const ext = path.extname(normalizedPath).toLowerCase()
+      if (ext !== '.md' && ext !== '.txt') {
+        return { success: false, error: 'Only markdown or text files can be saved' }
       }
 
       const realFilePath = await fs.realpath(normalizedPath)
@@ -455,8 +456,9 @@ app.whenReady().then(() => {
         return { success: false, error: 'Path must be absolute' }
       }
 
-      if (path.extname(normalizedPath).toLowerCase() !== '.md') {
-        return { success: false, error: 'Only markdown files can be deleted' }
+      const ext = path.extname(normalizedPath).toLowerCase()
+      if (ext !== '.md' && ext !== '.txt') {
+        return { success: false, error: 'Only markdown or text files can be deleted' }
       }
 
       const realFilePath = await fs.realpath(normalizedPath)
@@ -579,11 +581,6 @@ tags: []
 
         if (stat.isFile()) {
           const ext = path.extname(name).toLowerCase()
-
-          if (ext !== '.md') {
-            return null
-          }
-
           return {
             name,
             path: currentPath,
@@ -602,10 +599,6 @@ tags: []
             if (childNode) {
               children.push(childNode)
             }
-          }
-
-          if (!isRoot && children.length === 0) {
-            return null
           }
 
           return {

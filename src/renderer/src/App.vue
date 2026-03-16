@@ -124,11 +124,27 @@ const handleFileDropped = async (filePath) => {
   isEditing.value = false
 }
 
-const handleSelectFile = async (target) => {
-  const path = typeof target === 'string' ? target : target?.path
+const PREVIEWABLE_EXTENSIONS = ['.md', '.markdown', '.txt']
 
-  if (!path) {
+const handleSelectFile = async (target) => {
+  const filePath = typeof target === 'string' ? target : target?.path
+
+  if (!filePath) {
     console.warn('Invalid file selection', target)
+    return
+  }
+
+  const ext = (() => {
+    const i = filePath.lastIndexOf('.')
+    return i > 0 ? filePath.slice(i).toLowerCase() : ''
+  })()
+
+  if (ext && !PREVIEWABLE_EXTENSIONS.includes(ext)) {
+    await showAlert({
+      title: '无法预览',
+      message: `不支持预览该文件类型（${ext}），仅支持 Markdown（.md、.markdown）和文本（.txt）文件。`,
+      type: 'warning'
+    })
     return
   }
 
@@ -143,7 +159,7 @@ const handleSelectFile = async (target) => {
     })
   }
 
-  selectedFilePath.value = path
+  selectedFilePath.value = filePath
   isEditing.value = false
 }
 
