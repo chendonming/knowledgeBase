@@ -1,18 +1,5 @@
 <template>
   <div class="file-tree" @click="handleBackgroundClick">
-    <div class="file-tree-header">
-      <h3>Files</h3>
-      <button
-        v-if="tree"
-        class="header-btn"
-        title="新建文件"
-        @click="startCreateFile(tree)"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-      </button>
-    </div>
     <div class="tree-content">
       <TreeNode
         v-if="tree"
@@ -451,40 +438,6 @@ const confirmCreateFolder = () => {
   flex-direction: column;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border-color);
-}
-
-.file-tree-header {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.file-tree-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.header-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.15s;
-}
-
-.header-btn:hover {
-  background: var(--hover-bg);
-  color: var(--text-primary);
 }
 
 .tree-content {

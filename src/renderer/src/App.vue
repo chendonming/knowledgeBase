@@ -11,7 +11,8 @@ import SettingsPanel from './components/SettingsPanel.vue'
 import { applyFonts } from './stores/fontSettings'
 import {
   initializeUIState,
-  getOutlineCollapsed,
+  getSidebarActiveTab,
+  setSidebarActiveTab,
   initTheme,
   getThemeMode,
   clearTreeExpansionState
@@ -27,7 +28,7 @@ const showSearch = ref(false)
 const showSettings = ref(false)
 const sidebarCollapsed = ref(false)
 const markdownHtmlContent = ref('')
-const outlineCollapsed = getOutlineCollapsed()
+const sidebarActiveTab = getSidebarActiveTab()
 const themeMode = getThemeMode()
 const searchPanelRef = ref(null)
 const indexCheckingFolders = ref(new Set()) // 正在检查索引的文件夹集合
@@ -39,7 +40,6 @@ const viewerHasUnsavedChanges = ref(false)
 const viewerSaving = ref(false)
 
 // 提供全局状态
-provide('outlineCollapsed', outlineCollapsed)
 provide('themeMode', themeMode)
 
 // 初始化主题与字体
@@ -548,15 +548,45 @@ onBeforeUnmount(() => {
     />
     <div class="app-main">
       <div class="sidebar" :class="{ collapsed: sidebarCollapsed }">
-        <FileTree
-          :tree="fileTree"
-          :selected-path="selectedFilePath"
-          @select-file="handleSelectFile"
-          @edit-file="handleEditFile"
-          @delete-file="handleDeleteFile"
-          @create-file="handleCreateFile"
-          @create-folder="handleCreateFolder"
-        />
+        <div class="sidebar-tabs">
+          <button
+            class="tab-btn"
+            :class="{ active: sidebarActiveTab === 'files' }"
+            @click="setSidebarActiveTab('files')"
+          >
+            目录树
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: sidebarActiveTab === 'outline' }"
+            @click="setSidebarActiveTab('outline')"
+          >
+            大纲
+          </button>
+        </div>
+        <div class="sidebar-content">
+          <div v-show="sidebarActiveTab === 'files'" class="tab-pane">
+            <FileTree
+              :tree="fileTree"
+              :selected-path="selectedFilePath"
+              @select-file="handleSelectFile"
+              @edit-file="handleEditFile"
+              @delete-file="handleDeleteFile"
+              @create-file="handleCreateFile"
+              @create-folder="handleCreateFolder"
+            />
+          </div>
+          <div v-show="sidebarActiveTab === 'outline'" class="tab-pane">
+            <Outline
+              :html-content="markdownHtmlContent"
+              :editing="isEditing"
+              :pending-scroll-to-id="pendingOutlineScrollId"
+              compact
+              @exit-edit-and-scroll="handleOutlineExitEditAndScroll"
+              @scroll-done="pendingOutlineScrollId = null"
+            />
+          </div>
+        </div>
       </div>
       <div class="main-content">
         <MarkdownViewer
@@ -569,15 +599,6 @@ onBeforeUnmount(() => {
           @editing-changed="isEditing = $event"
           @update:hasUnsavedChanges="viewerHasUnsavedChanges = $event"
           @update:saving="viewerSaving = $event"
-        />
-      </div>
-      <div class="outline-panel" :class="{ collapsed: outlineCollapsed }">
-        <Outline
-          :html-content="markdownHtmlContent"
-          :editing="isEditing"
-          :pending-scroll-to-id="pendingOutlineScrollId"
-          @exit-edit-and-scroll="handleOutlineExitEditAndScroll"
-          @scroll-done="pendingOutlineScrollId = null"
         />
       </div>
     </div>
@@ -640,6 +661,55 @@ onBeforeUnmount(() => {
     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+}
+
+.sidebar-tabs {
+  display: flex;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.tab-btn.active {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tab-pane {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .sidebar.collapsed {
@@ -655,19 +725,6 @@ onBeforeUnmount(() => {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-primary);
-}
-
-.outline-panel {
-  width: 250px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.outline-panel.collapsed {
-  width: 40px;
 }
 
 .header {

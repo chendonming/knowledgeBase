@@ -1,16 +1,24 @@
 <template>
-  <div class="outline-container" :class="{ collapsed: isCollapsed }">
-    <div v-if="!isCollapsed" class="outline-header">
-      <h3>📑 大纲</h3>
-    </div>
-
-    <button v-if="headings.length" class="toggle-btn-side" @click="toggleCollapse">
+  <div class="outline-container" :class="{ collapsed: !compact && isCollapsed, compact }">
+    <button
+      v-if="!compact && headings.length"
+      class="toggle-btn-side"
+      @click="toggleCollapse"
+    >
       {{ isCollapsed ? '▶' : '◀' }}
     </button>
 
-    <div v-if="!headings.length && !isCollapsed" class="outline-empty">暂无标题</div>
+    <div
+      v-if="!headings.length && (!isCollapsed || compact)"
+      class="outline-empty"
+    >
+      暂无标题
+    </div>
 
-    <ul v-else-if="!isCollapsed" class="outline-list">
+    <ul
+      v-else-if="!isCollapsed || compact"
+      class="outline-list"
+    >
       <li
         v-for="heading in headings"
         :key="`${heading.id}-${heading.level}`"
@@ -40,6 +48,11 @@ const props = defineProps({
   pendingScrollToId: {
     type: String,
     default: null
+  },
+  /** 嵌入侧边栏标签页时使用，隐藏折叠按钮，始终展开 */
+  compact: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -168,6 +181,13 @@ watch(
   position: relative;
 }
 
+.outline-container.compact {
+  width: 100%;
+  min-width: 0;
+  border-left: none;
+  flex: 1;
+}
+
 /* 折叠状态：向右收起隐藏 */
 .outline-container.collapsed {
   width: 45px;
@@ -200,26 +220,6 @@ watch(
   background: var(--hover-bg);
   color: var(--text-primary);
   border-color: var(--accent-color);
-}
-
-.outline-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 50px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-tertiary);
-  min-height: 56px;
-  flex-shrink: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.outline-header h3 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: 0.3px;
 }
 
 .toggle-btn {

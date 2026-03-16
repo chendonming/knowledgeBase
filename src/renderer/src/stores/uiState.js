@@ -5,6 +5,7 @@ import { applyTheme, getThemeConfig } from '../themes/themeConfig'
 const outlineCollapsed = ref(false)
 const themeMode = ref('dark')
 const treeExpansionState = ref({}) // 目录树展开状态，key: path, value: expanded
+const sidebarActiveTab = ref('files') // 左侧标签页：'files' 目录树 | 'outline' 大纲
 
 // 检测系统主题偏好
 const getSystemTheme = () => {
@@ -57,6 +58,24 @@ export const initializeUIState = () => {
   const savedTreeState = localStorage.getItem('tree-expansion-state')
   if (savedTreeState) {
     treeExpansionState.value = JSON.parse(savedTreeState)
+  }
+
+  const savedTab = localStorage.getItem('sidebar-active-tab')
+  if (savedTab === 'files' || savedTab === 'outline') {
+    sidebarActiveTab.value = savedTab
+  }
+}
+
+// 获取左侧标签页选中项
+export const getSidebarActiveTab = () => {
+  return sidebarActiveTab
+}
+
+// 设置左侧标签页选中项并持久化
+export const setSidebarActiveTab = (tab) => {
+  if (tab === 'files' || tab === 'outline') {
+    sidebarActiveTab.value = tab
+    localStorage.setItem('sidebar-active-tab', tab)
   }
 }
 
