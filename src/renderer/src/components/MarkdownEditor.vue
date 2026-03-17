@@ -153,10 +153,15 @@ const props = defineProps({
   readOnly: {
     type: Boolean,
     default: false
+  },
+  /** 进入编辑时滚动到此行（从阅读区位置推算），滚动完成后会触发 scroll-done */
+  initialScrollLine: {
+    type: Number,
+    default: null
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'save'])
+const emit = defineEmits(['update:modelValue', 'save', 'scroll-done'])
 
 const editorContainer = ref(null)
 let editorInstance = null
@@ -593,6 +598,22 @@ onMounted(() => {
     resizeObserver.observe(editorContainer.value)
   }
 
+  // 进入编辑时滚动到阅读位置（延迟以等待 Transition 完成和 Monaco 布局）
+  const line = props.initialScrollLine
+  if (line != null && line >= 1 && editorInstance) {
+    const doScroll = () => {
+      if (!editorInstance) return
+      editorInstance.layout()
+      const lineCount = editorInstance.getModel()?.getLineCount() ?? 1
+      const targetLine = Math.min(line, Math.max(1, lineCount))
+      editorInstance.revealLineInCenter(targetLine)
+      editorInstance.setPosition({ lineNumber: targetLine, column: 1 })
+      emit('scroll-done')
+    }
+    // 等待 Vue Transition (0.25s) 完成后再滚动，确保 Monaco 已正确布局
+    setTimeout(doScroll, 350)
+  }
+
   const onFontChange = () => {
     editorInstance?.updateOptions({ fontFamily: getFontFamily('editor') })
   }
@@ -662,6 +683,19 @@ onBeforeUnmount(() => {
     editorInstance = null
   }
 })
+
+/** 获取当前滚动比例 [0,1]，供退出编辑时预览区恢复位置 */
+const getScrollRatio = () => {
+  if (!editorInstance) return 0
+  const scrollTop = editorInstance.getScrollTop()
+  const scrollHeight = editorInstance.getScrollHeight()
+  const dom = editorInstance.getDomNode()
+  const clientHeight = dom?.clientHeight ?? 0
+  const maxScroll = Math.max(1, scrollHeight - clientHeight)
+  return Math.max(0, Math.min(1, scrollTop / maxScroll))
+}
+
+defineExpose({ getScrollRatio })
 </script>
 
 <style scoped>

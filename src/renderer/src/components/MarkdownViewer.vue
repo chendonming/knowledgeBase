@@ -8,21 +8,32 @@
   >
     <div v-if="loading" class="loading">Loading...</div>
     <div v-else-if="error" class="error">Error: {{ error }}</div>
-    <div v-else class="viewer-content" :class="{ 'edit-mode': isEditing }">
+    <div
+      v-else
+      ref="viewerContentRef"
+      class="viewer-content"
+      :class="{ 'edit-mode': isEditing }"
+      @scroll="onPreviewScroll"
+    >
       <Transition name="viewer-mode" mode="out-in">
         <div v-if="isEditing" key="edit" class="editor-wrapper">
           <MarkdownEditor
+            ref="markdownEditorRef"
             v-model="editorContent"
             :theme="monacoTheme"
             language="markdown"
+            :initial-scroll-line="pendingEditorScrollLine"
             @save="saveFile"
+            @scroll-done="pendingEditorScrollLine = null"
           />
         </div>
         <div
           v-else
           key="preview"
+          ref="previewWrapperRef"
           class="preview-wrapper"
           @click="onPreviewClick"
+          @scroll="onPreviewScroll"
         >
           <!-- 欢迎页：无文件时显示 -->
           <div v-if="!filePath" class="welcome-page">
@@ -218,6 +229,15 @@ const saving = ref(false)
 const lastSavedPath = ref(null)
 const lastSavedTime = ref(0)
 const themeMode = getThemeMode()
+// 进入编辑时滚动到此行（从阅读位置推算）
+const pendingEditorScrollLine = ref(null)
+const previewWrapperRef = ref(null)
+const viewerContentRef = ref(null)
+const markdownEditorRef = ref(null)
+// 实时记录预览区滚动位置，供进入编辑时使用（比进入时再读取更可靠）
+const lastPreviewScroll = ref({ scrollTop: 0, scrollHeight: 0, clientHeight: 0 })
+// 退出编辑时记录的滚动比例，供预览区恢复位置
+const pendingPreviewScrollRatio = ref(null)
 const autoSaveEnabled = ref(localStorage.getItem('auto-save') === 'true')
 let autoSaveTimer = null
 
@@ -477,6 +497,18 @@ const handleFileChanged = async (_event, data) => {
 
   if (props.filePath) {
     await loadFile()
+  }
+}
+
+// 预览区滚动时记录位置，供进入编辑时定位
+const onPreviewScroll = (e) => {
+  const el = e?.target
+  if (el && el.scrollHeight > el.clientHeight) {
+    lastPreviewScroll.value = {
+      scrollTop: el.scrollTop,
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight
+    }
   }
 }
 
@@ -849,12 +881,49 @@ const enterEditMode = async () => {
     await loadFile()
   }
 
+  // 进入编辑前：根据预览区滚动位置计算目标行号
+  // 优先使用 scroll 事件实时记录的 lastPreviewScroll，否则从 DOM 读取
+  pendingEditorScrollLine.value = null
+  if (rawContent.value) {
+    let ratio = 0
+    const stored = lastPreviewScroll.value
+    if (stored && stored.scrollHeight > stored.clientHeight) {
+      const maxScroll = Math.max(1, stored.scrollHeight - stored.clientHeight)
+      ratio = Math.max(0, Math.min(1, stored.scrollTop / maxScroll))
+    } else {
+      const candidates = [
+        previewWrapperRef.value,
+        viewerContentRef.value,
+        document.querySelector('.markdown-viewer .preview-wrapper'),
+        document.querySelector('.markdown-viewer .viewer-content')
+      ].filter(Boolean)
+      let bestRatio = 0
+      for (const el of candidates) {
+        const { scrollTop, scrollHeight, clientHeight } = el
+        const maxScroll = Math.max(1, scrollHeight - clientHeight)
+        const r = scrollTop / maxScroll
+        if (r > bestRatio) bestRatio = r
+      }
+      ratio = Math.max(0, Math.min(1, bestRatio))
+    }
+    const lines = rawContent.value.split('\n').length
+    const targetLine = Math.max(1, Math.round(1 + ratio * (lines - 1)))
+    pendingEditorScrollLine.value = targetLine
+  }
+
   editorContent.value = rawContent.value
   isEditing.value = true
   emit('editing-changed', true)
 }
 
 const exitEditMode = () => {
+  // 退出编辑前：记录编辑器滚动比例，供预览区恢复位置
+  pendingPreviewScrollRatio.value = null
+  const ratio = markdownEditorRef.value?.getScrollRatio?.()
+  if (typeof ratio === 'number' && ratio >= 0 && ratio <= 1) {
+    pendingPreviewScrollRatio.value = ratio
+  }
+
   isEditing.value = false
   editorContent.value = rawContent.value
   emit('editing-changed', false)
@@ -1064,6 +1133,30 @@ watch(
     }
   }
 )
+
+// 退出编辑后，预览区滚动到编辑时的位置
+watch(isEditing, (val) => {
+  if (!val && pendingPreviewScrollRatio.value != null && props.filePath) {
+    const ratio = pendingPreviewScrollRatio.value
+    pendingPreviewScrollRatio.value = null
+    const scrollPreview = () => {
+      const candidates = [
+        previewWrapperRef.value,
+        viewerContentRef.value,
+        document.querySelector('.markdown-viewer .preview-wrapper'),
+        document.querySelector('.markdown-viewer .viewer-content')
+      ].filter(Boolean)
+      for (const el of candidates) {
+        if (el.scrollHeight > el.clientHeight) {
+          const maxScroll = el.scrollHeight - el.clientHeight
+          el.scrollTop = Math.round(ratio * maxScroll)
+          break
+        }
+      }
+    }
+    nextTick(() => setTimeout(scrollPreview, 300))
+  }
+})
 
 // Auto-save: debounced save when content changes in edit mode
 watch(editorContent, () => {
