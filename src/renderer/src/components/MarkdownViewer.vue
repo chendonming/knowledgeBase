@@ -1134,8 +1134,12 @@ watch(
   }
 )
 
-// 退出编辑后，预览区滚动到编辑时的位置
-watch(isEditing, (val) => {
+// 退出编辑后，预览区滚动到编辑时的位置；同时为代码块添加复制按钮（编辑→预览时 DOM 重建但 htmlContent 未变，watch 不触发）
+watch(isEditing, async (val) => {
+  if (!val && props.filePath) {
+    await nextTick()
+    setTimeout(() => addCopyButtonsToCodeBlocks(), 350) // 等待 Transition 完成后再添加
+  }
   if (!val && pendingPreviewScrollRatio.value != null && props.filePath) {
     const ratio = pendingPreviewScrollRatio.value
     pendingPreviewScrollRatio.value = null
