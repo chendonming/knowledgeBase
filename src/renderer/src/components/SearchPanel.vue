@@ -26,7 +26,7 @@ const searchError = ref(null)
 const isRefreshing = ref(false)
 const indexStats = ref(null)
 const showIndexStats = ref(false)
-const searchMode = ref('fulltext') // 'filename' or 'fulltext'
+const searchMode = ref('filename') // 'filename' or 'fulltext'
 
 // 执行搜索
 const performSearch = async (forceRefresh = false) => {
