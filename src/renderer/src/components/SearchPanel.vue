@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 
 const props = defineProps({
   isOpen: {
@@ -27,6 +27,8 @@ const isRefreshing = ref(false)
 const indexStats = ref(null)
 const showIndexStats = ref(false)
 const searchMode = ref('filename') // 'filename' or 'fulltext'
+const selectedIndex = ref(-1) // 键盘导航选中的结果索引，-1 表示未选中
+const resultsListRef = ref(null)
 
 // 执行搜索
 const performSearch = async (forceRefresh = false) => {
@@ -51,15 +53,18 @@ const performSearch = async (forceRefresh = false) => {
     if (result.success) {
       searchResults.value = result.results
       totalResults.value = result.total
+      selectedIndex.value = result.results.length > 0 ? 0 : -1
     } else {
       searchError.value = result.error || '搜索失败'
       searchResults.value = []
       totalResults.value = 0
+      selectedIndex.value = -1
     }
   } catch (error) {
     searchError.value = error.message || '搜索出错'
     searchResults.value = []
     totalResults.value = 0
+    selectedIndex.value = -1
   } finally {
     isSearching.value = false
   }
@@ -137,13 +142,46 @@ const handleClose = () => {
   searchResults.value = []
   totalResults.value = 0
   searchError.value = null
+  selectedIndex.value = -1
   emit('close')
+}
+
+// 滚动选中项到可见区域
+const scrollSelectedIntoView = () => {
+  nextTick(() => {
+    const selected = resultsListRef.value?.querySelector('.result-item.is-selected')
+    selected?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  })
 }
 
 // 处理键盘事件
 const handleKeyDown = (event) => {
   if (event.key === 'Escape') {
     handleClose()
+    return
+  }
+
+  // 有搜索结果时处理上下键和 Enter
+  if (searchResults.value.length > 0) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      selectedIndex.value = Math.min(selectedIndex.value + 1, searchResults.value.length - 1)
+      scrollSelectedIntoView()
+      return
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      selectedIndex.value = Math.max(selectedIndex.value - 1, 0)
+      scrollSelectedIntoView()
+      return
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      if (selectedIndex.value >= 0 && searchResults.value[selectedIndex.value]) {
+        selectFile(searchResults.value[selectedIndex.value])
+      }
+      return
+    }
   }
 }
 
@@ -205,8 +243,8 @@ watch(
           <button
             class="btn-refresh"
             :class="{ 'is-refreshing': isRefreshing }"
-            @click="refreshIndex"
             title="刷新索引"
+            @click="refreshIndex"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="23 4 23 10 17 10"></polyline>
@@ -254,11 +292,12 @@ watch(
           <div class="results-header">
             <span>找到 {{ totalResults }} 个结果</span>
           </div>
-          <div class="results-list">
+          <div ref="resultsListRef" class="results-list">
             <div
               v-for="(result, index) in searchResults"
               :key="index"
               class="result-item"
+              :class="{ 'is-selected': index === selectedIndex }"
               @click="selectFile(result)"
             >
               <div class="result-header">
@@ -304,8 +343,8 @@ watch(
         <div class="index-status">
           <button
             class="status-toggle"
-            @click="showIndexStats = !showIndexStats"
             :title="showIndexStats ? '隐藏索引状态' : '显示索引状态'"
+            @click="showIndexStats = !showIndexStats"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="1"></circle>
@@ -593,6 +632,12 @@ watch(
   border-color: var(--accent-color);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.result-item.is-selected {
+  background: var(--hover-bg);
+  border-color: var(--accent-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .result-header {
